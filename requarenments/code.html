@@ -1,0 +1,497 @@
+<!DOCTYPE html>
+<html class="dark" lang="en"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Yevgen Galamaga | AI-Powered Automation Architect</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght@100..700,FILL@0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=JetBrains+Mono:wght@400;500;700&amp;family=Caveat:wght@400;700&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    colors: {
+                        "secondary-fixed-dim": "#d0bcff",
+                        "on-primary-fixed": "#001d33",
+                        "secondary-fixed": "#e9ddff",
+                        "on-tertiary": "#003640",
+                        "outline-variant": "#3f4852",
+                        "tertiary-container": "#00abc8",
+                        "secondary": "#d0bcff",
+                        "on-secondary-container": "#c4abff",
+                        "inverse-primary": "#00629d",
+                        "primary-fixed": "#cfe5ff",
+                        "on-secondary": "#3c0091",
+                        "on-primary-fixed-variant": "#004a77",
+                        "primary": "#98cbff",
+                        "on-error": "#690005",
+                        "background": "#0b1326",
+                        "error": "#ffb4ab",
+                        "on-surface": "#dae2fd",
+                        "on-tertiary-fixed-variant": "#004e5c",
+                        "on-primary": "#003354",
+                        "on-secondary-fixed-variant": "#5516be",
+                        "inverse-on-surface": "#283044",
+                        "surface": "#0b1326",
+                        "surface-container-high": "#222a3d",
+                        "surface-dim": "#0b1326",
+                        "on-primary-container": "#00375a",
+                        "tertiary": "#4cd7f6",
+                        "surface-container-lowest": "#060e20",
+                        "outline": "#88919d",
+                        "on-error-container": "#ffdad6",
+                        "tertiary-fixed-dim": "#4cd7f6",
+                        "surface-container": "#171f33",
+                        "on-tertiary-container": "#003a44",
+                        "surface-tint": "#98cbff",
+                        "primary-fixed-dim": "#98cbff",
+                        "surface-bright": "#31394d",
+                        "primary-container": "#00a3ff",
+                        "on-background": "#dae2fd",
+                        "on-tertiary-fixed": "#001f26",
+                        "surface-container-highest": "#2d3449",
+                        "surface-container-low": "#131b2e",
+                        "surface-variant": "#2d3449",
+                        "secondary-container": "#571bc1",
+                        "error-container": "#93000a",
+                        "on-surface-variant": "#bec7d4",
+                        "inverse-surface": "#dae2fd",
+                        "tertiary-fixed": "#acedff",
+                        "on-secondary-fixed": "#23005c"
+                    },
+                    borderRadius: {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    fontFamily: {
+                        "headline": ["Inter", "sans-serif"],
+                        "body": ["Inter", "sans-serif"],
+                        "mono": ["JetBrains Mono", "monospace"],
+                        "label": ["JetBrains Mono", "monospace"],
+                        "signature": ["Caveat", "cursive"]
+                    }
+                },
+            },
+        }
+    </script>
+<style type="text/tailwindcss">
+        @layer utilities {
+            .glass-card {
+                background-color: rgba(19, 27, 46, 0.8);
+                backdrop-filter: blur(12px);
+                border: 1px solid rgba(136, 145, 157, 0.15);
+            }
+            .gradient-text {
+                background: linear-gradient(to right, #98cbff, #4cd7f6);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+            }
+            .bg-grid-pattern {
+                background-image: radial-gradient(rgba(136, 145, 157, 0.07) 1px, transparent 1px);
+                background-size: 32px 32px;
+            }
+            .terminal-border {
+                border-left: 2px solid theme('colors.primary/30');
+            }
+        }
+    </style>
+</head>
+<body class="bg-background text-on-surface antialiased font-body selection:bg-primary-container selection:text-on-primary-container min-h-screen flex flex-col">
+<nav class="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-xl border-b border-outline-variant/10">
+<div class="flex justify-between items-center px-8 py-4 max-w-7xl mx-auto w-full">
+<div class="text-lg font-black tracking-tighter text-slate-100 font-mono">YEVGEN_GALAMAGA</div>
+<div class="hidden md:flex gap-8 items-center">
+<a class="font-mono text-[10px] tracking-widest uppercase font-bold text-slate-400 hover:text-primary transition-colors" href="#services">01. Services</a>
+<a class="font-mono text-[10px] tracking-widest uppercase font-bold text-slate-400 hover:text-primary transition-colors" href="#projects">02. Projects</a>
+<a class="font-mono text-[10px] tracking-widest uppercase font-bold text-slate-400 hover:text-primary transition-colors" href="#tech-stack">03. Stack</a>
+<a class="font-mono text-[10px] tracking-widest uppercase font-bold text-slate-400 hover:text-primary transition-colors" href="#edge">04. Edge</a>
+</div>
+<button class="bg-primary text-on-primary px-5 py-2 rounded font-mono font-bold text-[10px] uppercase tracking-wider hover:bg-white transition-all shadow-lg shadow-primary/10">
+                [ Hire_Me ]
+            </button>
+</div>
+</nav>
+<main class="flex-grow">
+<section class="relative pt-32 pb-20 overflow-hidden bg-grid-pattern min-h-[870px] flex items-center">
+<div class="absolute top-0 left-0 w-full h-32 bg-gradient-to-b from-background to-transparent"></div>
+<div class="absolute top-1/4 -left-20 w-96 h-96 bg-primary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="absolute bottom-1/4 -right-20 w-96 h-96 bg-tertiary/5 rounded-full blur-[120px] pointer-events-none"></div>
+<div class="relative z-10 max-w-5xl mx-auto px-6">
+<div class="inline-flex items-center gap-3 px-4 py-1.5 rounded-full bg-surface-container-high border border-outline-variant/20 mb-10">
+<span class="w-2 h-2 rounded-full bg-tertiary animate-pulse"></span>
+<span class="text-[10px] font-mono font-bold tracking-[0.2em] uppercase text-on-surface-variant">System Architect // Automation Expert</span>
+</div>
+<h1 class="text-4xl md:text-6xl lg:text-7xl font-black tracking-tight leading-[1.1] mb-8">
+                    I build AI-powered automation systems that <span class="gradient-text">replace manual work</span> and scale operations that save teams 10–20 hours/week.
+                </h1>
+<p class="text-lg md:text-xl text-on-surface-variant max-w-3xl mb-12 leading-relaxed">
+                    I specialize in building automation-first systems — combining full-stack development with AI and n8n to eliminate repetitive processes, connect tools, and turn workflows into scalable systems.
+                </p>
+<div class="flex flex-col sm:flex-row gap-4">
+<button class="bg-primary text-on-primary px-8 py-4 rounded font-bold text-sm uppercase tracking-wider hover:shadow-[0_0_30px_rgba(152,203,255,0.3)] transition-all flex items-center justify-center gap-3 group">
+                        Tell me what you want to eliminate — I’ll build the system
+                        <span class="material-symbols-outlined text-sm group-hover:translate-x-1 transition-transform">arrow_right_alt</span>
+</button>
+</div>
+</div>
+</section>
+<section class="py-24 bg-surface-container-lowest border-y border-outline-variant/10 overflow-hidden">
+<div class="max-w-4xl mx-auto px-6">
+<div class="mb-12">
+<span class="font-mono text-[10px] text-primary tracking-widest uppercase mb-2 block font-bold">[ impact_metrics ]</span>
+<h2 class="text-3xl font-bold tracking-tight">Proof of Performance</h2>
+</div>
+<div class="font-mono text-sm border-l border-outline-variant/30 pl-8 space-y-0 relative">
+<div class="py-8 border-b border-dashed border-outline-variant/20 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+<span class="text-on-surface-variant uppercase tracking-widest text-[11px] font-bold">01 // efficiency_gain</span>
+<div class="flex items-baseline gap-4">
+<span class="text-4xl font-bold text-primary font-mono">75%</span>
+<span class="text-on-surface-variant/70 italic lowercase font-mono">reduced manual work</span>
+</div>
+</div>
+<div class="py-8 border-b border-dashed border-outline-variant/20 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+<span class="text-on-surface-variant uppercase tracking-widest text-[11px] font-bold">02 // data_throughput</span>
+<div class="flex items-baseline gap-4">
+<span class="text-4xl font-bold text-secondary font-mono">10,000+</span>
+<span class="text-on-surface-variant/70 italic lowercase font-mono">records processing automated</span>
+</div>
+</div>
+<div class="py-8 border-b border-dashed border-outline-variant/20 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+<span class="text-on-surface-variant uppercase tracking-widest text-[11px] font-bold">03 // capacity_unlock</span>
+<div class="flex items-baseline gap-4">
+<span class="text-4xl font-bold text-tertiary font-mono">15+ hrs</span>
+<span class="text-on-surface-variant/70 italic lowercase font-mono">saved per week for teams</span>
+</div>
+</div>
+<div class="py-8 flex flex-col md:flex-row md:items-center justify-between gap-4 group">
+<span class="text-on-surface-variant uppercase tracking-widest text-[11px] font-bold">04 // system_scope</span>
+<div class="flex items-baseline gap-4">
+<span class="text-4xl font-bold text-white font-mono">Full-End</span>
+<span class="text-on-surface-variant/70 italic lowercase font-mono">built end-to-end systems</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="py-32 px-6" id="services">
+<div class="max-w-7xl mx-auto">
+<div class="mb-16">
+<span class="font-mono text-[10px] font-bold tracking-widest uppercase text-primary mb-2 block">Capabilities</span>
+<h2 class="text-4xl font-bold tracking-tight">What I Do</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+<div class="glass-card p-10 rounded-xl hover:border-primary/30 transition-all group">
+<div class="font-mono text-[10px] text-tertiary mb-6 opacity-50">FUNC_01</div>
+<h4 class="text-xl font-bold mb-4">Build AI-powered workflows</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-6">Leveraging n8n, APIs, and LLMs to create intelligent automated processes that think and act.</p>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary">n8n</span>
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">OPENAI</span>
+</div>
+</div>
+<div class="glass-card p-10 rounded-xl hover:border-primary/30 transition-all group">
+<div class="font-mono text-[10px] text-primary mb-6 opacity-50">FUNC_02</div>
+<h4 class="text-xl font-bold mb-4">Develop custom full-stack systems</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-6">Building robust platforms with Next.js, modern backends, and scalable database architectures.</p>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">NEXT.JS</span>
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">DRIZZLE</span>
+</div>
+</div>
+<div class="glass-card p-10 rounded-xl hover:border-primary/30 transition-all group">
+<div class="font-mono text-[10px] text-secondary mb-6 opacity-50">FUNC_03</div>
+<h4 class="text-xl font-bold mb-4">Integrate third-party tools</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-6">Connecting CRMs, social APIs, payment gateways, and proprietary legacy systems into one mesh.</p>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">REST_API</span>
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">WEBHOOKS</span>
+</div>
+</div>
+<div class="glass-card p-10 rounded-xl hover:border-primary/30 transition-all group">
+<div class="font-mono text-[10px] text-tertiary-container mb-6 opacity-50">FUNC_04</div>
+<h4 class="text-xl font-bold mb-4">Create automation dashboards</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-6">Internal tools providing visibility and real-time control over every automated process in your team.</p>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">TANSTACK</span>
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">POSTGRES</span>
+</div>
+</div>
+<div class="glass-card p-10 rounded-xl hover:border-primary/30 transition-all group lg:col-span-2">
+<div class="font-mono text-[10px] text-primary-container mb-6 opacity-50">FUNC_05</div>
+<h4 class="text-xl font-bold mb-4">Design Telegram / bot-based interfaces</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed mb-6">Creating lightweight, conversational interfaces for high-speed, mobile-first interactions with your complex systems.</p>
+<div class="flex gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">BOT_API</span>
+<span class="font-mono text-[9px] bg-surface-container-high px-2 py-0.5 rounded text-primary font-bold">WEB_APP</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="py-16 bg-surface-container-lowest border-y border-outline-variant/10">
+<div class="max-w-4xl mx-auto px-6">
+<div class="flex flex-col md:flex-row items-center gap-10 py-10">
+<div class="relative group">
+<div class="absolute inset-0 rounded-full bg-gradient-to-tr from-primary to-tertiary blur-lg opacity-30 group-hover:opacity-50 transition-opacity"></div>
+<img alt="Yevgen Galamaga" class="relative w-28 h-28 rounded-full object-cover border-2 border-outline-variant/20 p-1 bg-surface-container shadow-2xl" src="https://lh3.googleusercontent.com/aida-public/AB6AXuDcABBdI_2eHTE0nbJw3WpX5VnqLhci8tI4aWhnYZjcCfRdDO5-rvJG73lRZuJP-OcIvPurgDkLx7T9-NNPwGNI682-zupSPy8-x7aLFlYodPIlHxYmw3PZXdSAjx-gpCHQMPN2nxvobQqfS2cRHb_ePsjLzZEQylFcWnc_s39DhQev64V1AbWmWtUhY4GiflHzqltvPGjTapStROBnRHvbZTRZMZDDbFryxDGAnWzGQVTUqziHbteZYWYCtnXEtgKAXuCKEWPPpIiW"/>
+<div class="absolute -bottom-2 -right-2 bg-primary w-6 h-6 rounded-full flex items-center justify-center border-4 border-surface-container-lowest">
+<span class="material-symbols-outlined text-[12px] text-on-primary font-bold">verified</span>
+</div>
+</div>
+<div class="flex-grow space-y-4 border-l border-dashed border-outline-variant/30 pl-10">
+<div class="space-y-1">
+<span class="font-mono text-[10px] tracking-widest text-primary uppercase font-bold tracking-widest">Architect_Identity</span>
+<div class="font-signature text-4xl text-on-surface mt-2">Yevgen Galamaga</div>
+</div>
+<p class="text-on-surface-variant italic font-body leading-relaxed max-w-xl">
+                            "If a task repeats twice, it should be automated. My philosophy is rooted in building systems that aren't just efficient, but autonomous—freeing human intellect for the work that truly matters."
+                        </p>
+</div>
+</div>
+</div>
+</section>
+<section class="py-32 bg-surface-container-low" id="projects">
+<div class="max-w-7xl mx-auto px-6">
+<div class="mb-16">
+<span class="font-mono text-[10px] font-bold tracking-widest uppercase text-secondary mb-2 block">Case Studies</span>
+<h2 class="text-4xl font-bold tracking-tight">Signature Projects</h2>
+</div>
+<div class="space-y-24">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+<div class="space-y-6">
+<div class="flex items-center gap-4">
+<span class="text-4xl">🏫</span>
+<h3 class="text-2xl font-bold">School Management System</h3>
+</div>
+<p class="text-on-surface-variant leading-relaxed">
+                                A full-stack operational platform for managing all school processes in one system. Replaced fragmented tools with a single centralized engine.
+                            </p>
+<ul class="space-y-3 font-mono text-sm text-on-surface/80">
+<li class="flex gap-3">
+<span class="text-primary font-bold">→</span>
+<span>Automated scheduling, attendance, &amp; curriculum</span>
+</li>
+<li class="flex gap-3">
+<span class="text-primary font-bold">→</span>
+<span>Teacher coordination &amp; salary processing</span>
+</li>
+<li class="flex gap-3">
+<span class="text-primary font-bold">→</span>
+<span>End-to-end financial reporting</span>
+</li>
+</ul>
+<div class="pt-4 border-t border-outline-variant/20">
+<div class="flex gap-8">
+<div>
+<div class="font-mono text-primary font-bold text-xl">~70%</div>
+<div class="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">WORKLOAD_RED</div>
+</div>
+<div>
+<div class="font-mono text-white font-bold text-xl">100%</div>
+<div class="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">CONSOLIDATION</div>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-card aspect-video rounded-xl bg-[url('https://images.unsplash.com/photo-1516321318423-f06f85e504b3?q=80&amp;w=800&amp;auto=format&amp;fit=crop')] bg-cover bg-center grayscale hover:grayscale-0 transition-all duration-700 opacity-60"></div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+<div class="order-2 lg:order-1 glass-card aspect-video rounded-xl bg-[url('https://images.unsplash.com/photo-1568667256549-094345857637?q=80&amp;w=800&amp;auto=format&amp;fit=crop')] bg-cover bg-center grayscale hover:grayscale-0 transition-all duration-700 opacity-60"></div>
+<div class="order-1 lg:order-2 space-y-6">
+<div class="flex items-center gap-4">
+<span class="text-4xl">📄</span>
+<h3 class="text-2xl font-bold">Document Lifecycle System</h3>
+</div>
+<p class="text-on-surface-variant leading-relaxed">
+                                Digital system for generating, tracking, and archiving business documents. Handles full lifecycle from creation to legal signing.
+                            </p>
+<ul class="space-y-3 font-mono text-sm text-on-surface/80">
+<li class="flex gap-3">
+<span class="text-secondary font-bold">→</span>
+<span>Automated contracts &amp; invoice generation</span>
+</li>
+<li class="flex gap-3">
+<span class="text-secondary font-bold">→</span>
+<span>Real-time approval &amp; signing tracking</span>
+</li>
+<li class="flex gap-3">
+<span class="text-secondary font-bold">→</span>
+<span>Structured secure cloud archiving</span>
+</li>
+</ul>
+<div class="pt-4 border-t border-outline-variant/20">
+<div class="flex gap-8">
+<div>
+<div class="font-mono text-secondary font-bold text-xl">0 MS</div>
+<div class="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">MANUAL_HANDLING</div>
+</div>
+<div>
+<div class="font-mono text-white font-bold text-xl">LIVE</div>
+<div class="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">STATUS_VIS</div>
+</div>
+</div>
+</div>
+</div>
+</div>
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+<div class="space-y-6">
+<div class="flex items-center gap-4">
+<span class="text-4xl">🤖</span>
+<h3 class="text-2xl font-bold">AI Content Pipeline</h3>
+</div>
+<p class="text-on-surface-variant leading-relaxed">
+                                An AI-powered automation pipeline built with n8n and APIs for massive-scale content generation and multi-channel distribution.
+                            </p>
+<ul class="space-y-3 font-mono text-sm text-on-surface/80">
+<li class="flex gap-3">
+<span class="text-tertiary font-bold">→</span>
+<span>Automated text &amp; caption formatting</span>
+</li>
+<li class="flex gap-3">
+<span class="text-tertiary font-bold">→</span>
+<span>Multi-platform distribution engine</span>
+</li>
+<li class="flex gap-3">
+<span class="text-tertiary font-bold">→</span>
+<span>Analytics tracking &amp; performance feedback</span>
+</li>
+</ul>
+<div class="pt-4 border-t border-outline-variant/20">
+<div class="flex gap-8">
+<div>
+<div class="font-mono text-tertiary font-bold text-xl">10X</div>
+<div class="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">OUTPUT_SCALE</div>
+</div>
+<div>
+<div class="font-mono text-white font-bold text-xl">MIN</div>
+<div class="font-mono text-[9px] uppercase tracking-widest text-on-surface-variant font-bold">MKT_WORKLOAD</div>
+</div>
+</div>
+</div>
+</div>
+<div class="glass-card aspect-video rounded-xl bg-[url('https://images.unsplash.com/photo-1677442136019-21780ecad995?q=80&amp;w=800&amp;auto=format&amp;fit=crop')] bg-cover bg-center grayscale hover:grayscale-0 transition-all duration-700 opacity-60"></div>
+</div>
+</div>
+</div>
+</section>
+<section class="py-32 px-6" id="edge">
+<div class="max-w-4xl mx-auto">
+<div class="text-center mb-16">
+<span class="font-mono text-[10px] font-bold tracking-widest uppercase text-primary mb-2 block">The Edge</span>
+<h2 class="text-4xl font-bold tracking-tight">The Systems Thinking Advantage</h2>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-10">
+<div class="flex gap-6">
+<span class="font-mono text-primary font-bold">01</span>
+<div>
+<h4 class="font-bold mb-2">Workflow-First Design</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed">“I don’t just build apps — I automate entire workflows”</p>
+</div>
+</div>
+<div class="flex gap-6">
+<span class="font-mono text-secondary font-bold">02</span>
+<div>
+<h4 class="font-bold mb-2">ROI-Driven Dev</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed">“I focus on ROI, not just code”</p>
+</div>
+</div>
+<div class="flex gap-6">
+<span class="font-mono text-tertiary font-bold">03</span>
+<div>
+<h4 class="font-bold mb-2">Hybrid Expertise</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed">“I combine AI + backend + automation in one system”</p>
+</div>
+</div>
+<div class="flex gap-6">
+<span class="font-mono text-on-surface-variant font-bold">04</span>
+<div>
+<h4 class="font-bold mb-2">Architectural Logic</h4>
+<p class="text-on-surface-variant text-sm leading-relaxed">“I think in systems, not features”</p>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="py-24 bg-surface-container-lowest" id="tech-stack">
+<div class="max-w-7xl mx-auto px-6">
+<div class="text-center mb-16">
+<span class="font-mono text-[10px] font-bold tracking-widest uppercase text-secondary mb-2 block">Tooling</span>
+<h3 class="text-4xl font-bold tracking-tight">The Tech Stack</h3>
+</div>
+<div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+<div class="glass-card p-8 rounded-xl">
+<div class="font-mono text-[11px] font-bold uppercase tracking-widest text-secondary mb-6 flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-secondary"></span>
+                            AUTOMATION_AI
+                        </div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-secondary/40 transition-colors font-bold uppercase">n8n</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-secondary/40 transition-colors font-bold uppercase">OpenAI</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-secondary/40 transition-colors font-bold uppercase">Claude</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-secondary/40 transition-colors font-bold uppercase">APIs</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-secondary/40 transition-colors font-bold uppercase">Webhooks</span>
+</div>
+</div>
+<div class="glass-card p-8 rounded-xl">
+<div class="font-mono text-[11px] font-bold uppercase tracking-widest text-primary mb-6 flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-primary"></span>
+                            FRONTEND_CORE
+                        </div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-primary/40 transition-colors font-bold uppercase">Next.js</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-primary/40 transition-colors font-bold uppercase">React</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-primary/40 transition-colors font-bold uppercase">TypeScript</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-primary/40 transition-colors font-bold uppercase">Tailwind_CSS</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-primary/40 transition-colors font-bold uppercase">shadcn/ui</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-primary/40 transition-colors font-bold uppercase">TanStack</span>
+</div>
+</div>
+<div class="glass-card p-8 rounded-xl">
+<div class="font-mono text-[11px] font-bold uppercase tracking-widest text-tertiary mb-6 flex items-center gap-2">
+<span class="w-1.5 h-1.5 rounded-full bg-tertiary"></span>
+                            BACKEND_SYSTEM
+                        </div>
+<div class="flex flex-wrap gap-2">
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-tertiary/40 transition-colors font-bold uppercase">Node.js</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-tertiary/40 transition-colors font-bold uppercase">PostgreSQL</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-tertiary/40 transition-colors font-bold uppercase">Drizzle</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-tertiary/40 transition-colors font-bold uppercase">Neon</span>
+<span class="px-3 py-1 bg-surface-container-low rounded font-mono text-[10px] text-on-surface/80 border border-outline-variant/20 hover:border-tertiary/40 transition-colors font-bold uppercase">Vercel</span>
+</div>
+</div>
+</div>
+</div>
+</section>
+<section class="py-40 px-6 relative overflow-hidden bg-slate-950">
+<div class="absolute inset-0 bg-primary/5"></div>
+<div class="max-w-4xl mx-auto text-center relative z-10">
+<p class="font-mono text-sm text-primary mb-8 tracking-tighter opacity-80 uppercase italic font-bold">“IF_TASK_REPEATS == TRUE { AUTOMATE(); }”</p>
+<h2 class="text-3xl md:text-5xl font-black mb-12 tracking-tight">Ready to reclaim your time?</h2>
+<button class="bg-primary text-on-primary px-10 py-5 rounded-md font-bold text-lg uppercase tracking-wider hover:shadow-[0_0_40px_rgba(152,203,255,0.4)] transition-all inline-flex items-center gap-4">
+                    Tell me what you want to eliminate — I’ll build the system
+                    <span class="material-symbols-outlined">bolt</span>
+</button>
+</div>
+</section>
+</main>
+<footer class="bg-surface-container-lowest w-full py-16 px-8 border-t border-outline-variant/10">
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-8 max-w-7xl mx-auto">
+<div class="space-y-4">
+<div class="text-slate-100 font-mono font-bold tracking-tighter text-xl">YEVGEN_GALAMAGA</div>
+<div class="text-slate-500 font-mono text-[10px] uppercase tracking-widest font-bold">
+                    © 2024 Kinetic Architect of Automation.
+                </div>
+</div>
+<div class="flex flex-wrap gap-8">
+<a class="font-mono text-[11px] uppercase tracking-widest text-slate-500 hover:text-primary transition-colors font-bold" href="#">LinkedIn</a>
+<a class="font-mono text-[11px] uppercase tracking-widest text-slate-500 hover:text-primary transition-colors font-bold" href="#">GitHub</a>
+<a class="font-mono text-[11px] uppercase tracking-widest text-slate-500 hover:text-primary transition-colors font-bold" href="#">Twitter</a>
+<a class="font-mono text-[11px] uppercase tracking-widest text-slate-500 hover:text-primary transition-colors font-bold" href="#">Email</a>
+</div>
+</div>
+</footer>
+
+</body></html>

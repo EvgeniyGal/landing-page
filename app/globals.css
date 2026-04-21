@@ -1,0 +1,68 @@
+@import "tailwindcss";
+
+:root {
+  --background: #0b1326;
+  --foreground: #dae2fd;
+  --surface-low: #131b2e;
+  --surface-high: #222a3d;
+  --surface-bright: #31394d;
+  --primary: #98cbff;
+  --primary-strong: #00a3ff;
+  --secondary: #d0bcff;
+  --tertiary: #4cd7f6;
+  --muted: #bec7d4;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+html,
+body {
+  min-height: 100%;
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+button,
+input[type="button"],
+input[type="submit"],
+input[type="reset"] {
+  cursor: pointer;
+}
+
+button:disabled,
+input[type="button"]:disabled,
+input[type="submit"]:disabled,
+input[type="reset"]:disabled {
+  cursor: not-allowed;
+}
+
+.section-shell {
+  background-image: radial-gradient(rgba(136, 145, 157, 0.08) 1px, transparent 1px);
+  background-size: 30px 30px;
+}
+
+.glass-card {
+  background: rgba(19, 27, 46, 0.8);
+  border: 1px solid rgba(136, 145, 157, 0.18);
+  backdrop-filter: blur(12px);
+}
+
+.primary-glow {
+  box-shadow: 0 0 30px rgba(152, 203, 255, 0.26);
+}
+
+.gradient-text {
+  background: linear-gradient(90deg, var(--primary), var(--tertiary));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
