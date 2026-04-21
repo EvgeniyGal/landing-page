@@ -16,6 +16,7 @@ export type Project = {
   id: string;
   emoji: string;
   title: string;
+  image: string;
   description: string;
   highlights: string[];
   stats: { label: string; value: string }[];
@@ -93,6 +94,7 @@ export const projects: Project[] = [
     id: "school",
     emoji: "🏫",
     title: "School Management System",
+    image: "/school-management-system.webp",
     description:
       "A full-stack operational platform for managing all school processes in one system. Replaced fragmented tools with a single centralized engine.",
     highlights: [
@@ -109,6 +111,7 @@ export const projects: Project[] = [
     id: "docs",
     emoji: "📄",
     title: "Document Lifecycle System",
+    image: "/document-life-cycle.webp",
     description:
       "Digital system for generating, tracking, and archiving business documents. Handles full lifecycle from creation to legal signing.",
     highlights: [
@@ -125,6 +128,7 @@ export const projects: Project[] = [
     id: "content",
     emoji: "🤖",
     title: "AI Content Pipeline",
+    image: "/ai-content-pipeline.webp",
     description:
       "An AI-powered automation pipeline built with n8n and APIs for massive-scale content generation and multi-channel distribution.",
     highlights: [

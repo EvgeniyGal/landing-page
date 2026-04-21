@@ -238,10 +238,14 @@ export function ProjectsSection() {
                 index % 2 ? "lg:order-1" : ""
               }`}
             >
-              <div className="absolute inset-0 bg-gradient-to-br from-[#263042] to-[#131b2e]" />
-              <p className="relative z-10 font-mono text-xs uppercase tracking-[0.2em] text-[var(--muted)]">
-                Placeholder image
-              </p>
+              <Image
+                src={project.image}
+                alt={project.title}
+                fill
+                sizes="(min-width: 1024px) 50vw, 100vw"
+                className="object-cover"
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#0a1020]/40 via-transparent to-transparent" />
             </div>
           </article>
         ))}
@@ -385,25 +389,31 @@ export function SiteFooter() {
         </div>
         <div className="flex flex-wrap gap-8">
           <a
-            href="#"
+            href="https://www.linkedin.com/in/yevgengalamaga/"
+            target="_blank"
+            rel="noreferrer"
             className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-[#8f98aa] transition-colors hover:text-[var(--primary)]"
           >
             LinkedIn
           </a>
           <a
-            href="#"
+            href="https://github.com/EvgeniyGal"
+            target="_blank"
+            rel="noreferrer"
             className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-[#8f98aa] transition-colors hover:text-[var(--primary)]"
           >
             GitHub
           </a>
           <a
-            href="#"
+            href="https://t.me/yevgengalamaga"
+            target="_blank"
+            rel="noreferrer"
             className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-[#8f98aa] transition-colors hover:text-[var(--primary)]"
           >
-            Twitter
+            Telegram
           </a>
           <a
-            href="#"
+            href="mailto:evgeniygal@gmail.com"
             className="font-mono text-[11px] font-bold uppercase tracking-[0.18em] text-[#8f98aa] transition-colors hover:text-[var(--primary)]"
           >
             Email
