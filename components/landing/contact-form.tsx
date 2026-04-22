@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { Locale, translateContent } from "@/app/data/site-content";
 
 type ContactState = {
   name: string;
@@ -19,9 +20,11 @@ const initialState: ContactState = {
 type ContactFormProps = {
   isOpen: boolean;
   onClose: () => void;
+  locale: Locale;
 };
 
-export function ContactForm({ isOpen, onClose }: ContactFormProps) {
+export function ContactForm({ isOpen, onClose, locale }: ContactFormProps) {
+  const content = translateContent(locale).copy.contact;
   const [form, setForm] = useState<ContactState>(initialState);
   const [status, setStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
   const [feedback, setFeedback] = useState("");
@@ -46,16 +49,16 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
 
       if (!response.ok) {
         setStatus("error");
-        setFeedback(payload.error ?? "Could not send your message.");
+        setFeedback(payload.error ?? content.errorSend);
         return;
       }
 
       setStatus("success");
-      setFeedback(payload.message ?? "Message sent successfully.");
+      setFeedback(payload.message ?? content.successSend);
       setForm(initialState);
     } catch {
       setStatus("error");
-      setFeedback("Unexpected network error. Please try again.");
+      setFeedback(content.networkError);
     }
   }
 
@@ -64,15 +67,13 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
       <div className="w-full max-w-3xl rounded-2xl border border-white/15 bg-[var(--surface-high)] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.55)]">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-bold">Tell me what you want to eliminate</h3>
-            <p className="mt-2 text-sm text-[var(--muted)]">
-              Share your process bottleneck and I will design the automation system.
-            </p>
+            <h3 className="text-2xl font-bold">{content.title}</h3>
+            <p className="mt-2 text-sm text-[var(--muted)]">{content.subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
-            aria-label="Close contact form"
+            aria-label={content.closeAria}
             className="rounded border border-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
           >
             X
@@ -80,7 +81,7 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
           <label className="block text-sm">
-            <span className="mb-1 block text-[var(--muted)]">Name</span>
+            <span className="mb-1 block text-[var(--muted)]">{content.labels.name}</span>
             <input
               required
               value={form.name}
@@ -89,7 +90,7 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-[var(--muted)]">Email</span>
+            <span className="mb-1 block text-[var(--muted)]">{content.labels.email}</span>
             <input
               required
               type="email"
@@ -99,7 +100,7 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-[var(--muted)]">Company (optional)</span>
+            <span className="mb-1 block text-[var(--muted)]">{content.labels.company}</span>
             <input
               value={form.company}
               onChange={(event) => setForm((prev) => ({ ...prev, company: event.target.value }))}
@@ -107,7 +108,7 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
             />
           </label>
           <label className="block text-sm">
-            <span className="mb-1 block text-[var(--muted)]">What should be automated?</span>
+            <span className="mb-1 block text-[var(--muted)]">{content.labels.message}</span>
             <textarea
               required
               rows={5}
@@ -121,7 +122,7 @@ export function ContactForm({ isOpen, onClose }: ContactFormProps) {
             disabled={status === "loading"}
             className="rounded bg-[var(--primary)] px-5 py-3 text-sm font-bold uppercase tracking-wide text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {status === "loading" ? "Sending..." : "Send inquiry"}
+            {status === "loading" ? content.sending : content.send}
           </button>
         </form>
         {feedback ? (

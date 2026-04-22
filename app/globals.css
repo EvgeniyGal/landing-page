@@ -1,6 +1,19 @@
 @import "tailwindcss";
 
 :root {
+  --background: #f4f7ff;
+  --foreground: #101a2f;
+  --surface-low: #e8eefc;
+  --surface-high: #f8fbff;
+  --surface-bright: #d8e2f7;
+  --primary: #2563eb;
+  --primary-strong: #1d4ed8;
+  --secondary: #7c3aed;
+  --tertiary: #0891b2;
+  --muted: #5b6880;
+}
+
+html.dark {
   --background: #0b1326;
   --foreground: #dae2fd;
   --surface-low: #131b2e;
@@ -51,7 +64,7 @@ input[type="reset"]:disabled {
 }
 
 .glass-card {
-  background: rgba(19, 27, 46, 0.8);
+  background: color-mix(in srgb, var(--surface-low) 82%, transparent);
   border: 1px solid rgba(136, 145, 157, 0.18);
   backdrop-filter: blur(12px);
 }
