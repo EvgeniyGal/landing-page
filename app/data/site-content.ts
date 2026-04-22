@@ -31,13 +31,6 @@ export type Project = {
   stats: { label: LocalizedText; value: LocalizedText }[];
 };
 
-export const navLinks = [
-  { href: "#services", label: "Services" },
-  { href: "#projects", label: "Projects" },
-  { href: "#tech-stack", label: "Stack" },
-  { href: "#edge", label: "Edge" },
-];
-
 export const hero = {
   badge: {
     en: "System Architect // Automation Expert",
@@ -195,13 +188,6 @@ export const projects: Project[] = [
       { label: { en: "MKT_WORKLOAD", uk: "MKT_WORKLOAD" }, value: { en: "MIN", uk: "MIN" } },
     ],
   },
-];
-
-export const edgePoints = [
-  "I don't just build apps - I automate entire workflows",
-  "I focus on ROI, not just code",
-  "I combine AI + backend + automation in one system",
-  "I think in systems, not features",
 ];
 
 export const stack = {
