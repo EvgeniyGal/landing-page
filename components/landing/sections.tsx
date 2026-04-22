@@ -27,7 +27,7 @@ export function TopNav({ onOpenContact, locale, theme, onThemeChange, onLocaleCh
     <nav className="fixed top-0 z-50 w-full border-b border-white/10 bg-background/80 backdrop-blur-xl">
       <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-8 py-4">
         <p className="font-mono text-lg font-black tracking-tighter text-slate-100">YEVGEN_GALAMAGA</p>
-        <div className="hidden items-center gap-4 md:flex">
+        <div className="hidden items-center gap-6 md:flex">
           {navItems.map((link) => (
             <a
               key={link.href}
@@ -37,36 +37,38 @@ export function TopNav({ onOpenContact, locale, theme, onThemeChange, onLocaleCh
               {link.label}
             </a>
           ))}
-          <div className="flex items-center gap-1 rounded border border-white/20 bg-[var(--surface-low)] p-1">
-            <button
-              type="button"
-              onClick={() => onLocaleChange("en")}
-              className={`rounded px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${
-                locale === "en" ? "bg-[var(--primary)] text-slate-900" : "text-[var(--muted)]"
-              }`}
+          <div className="ml-6 flex items-center gap-2">
+            <div className="flex items-center gap-1 rounded border border-white/20 bg-[var(--surface-low)] p-1">
+              <button
+                type="button"
+                onClick={() => onLocaleChange("en")}
+                className={`rounded px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${
+                  locale === "en" ? "bg-[var(--primary)] text-slate-900" : "text-[var(--muted)]"
+                }`}
+              >
+                EN
+              </button>
+              <button
+                type="button"
+                onClick={() => onLocaleChange("uk")}
+                className={`rounded px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${
+                  locale === "uk" ? "bg-[var(--primary)] text-slate-900" : "text-[var(--muted)]"
+                }`}
+              >
+                UA
+              </button>
+            </div>
+            <select
+              value={theme}
+              onChange={(event) => onThemeChange(event.target.value as ThemeMode)}
+              aria-label="Theme switcher"
+              className="w-9 appearance-none rounded border border-white/20 bg-[var(--surface-low)] px-0 py-1 text-center font-mono text-sm font-bold text-[var(--muted)] outline-none [-moz-appearance:textfield] [&::-ms-expand]:hidden"
             >
-              EN
-            </button>
-            <button
-              type="button"
-              onClick={() => onLocaleChange("uk")}
-              className={`rounded px-2 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.16em] ${
-                locale === "uk" ? "bg-[var(--primary)] text-slate-900" : "text-[var(--muted)]"
-              }`}
-            >
-              UA
-            </button>
+              <option value="light">☀</option>
+              <option value="dark">☾</option>
+              <option value="system">🖥</option>
+            </select>
           </div>
-          <select
-            value={theme}
-            onChange={(event) => onThemeChange(event.target.value as ThemeMode)}
-            aria-label="Theme switcher"
-            className="w-9 appearance-none rounded border border-white/20 bg-[var(--surface-low)] px-0 py-1 text-center font-mono text-sm font-bold text-[var(--muted)] outline-none [-moz-appearance:textfield] [&::-ms-expand]:hidden"
-          >
-            <option value="light">☀</option>
-            <option value="dark">☾</option>
-            <option value="system">🖥</option>
-          </select>
         </div>
         <button
           type="button"
