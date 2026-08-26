@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
-    "test:contact": "tsx --test tests/contact.test.ts"
+    "test:contact": "tsx --test tests/contact.test.ts",
+    "test:seo": "tsx --test tests/seo.test.ts"
   },
   "dependencies": {
     "form-data": "^4.0.5",

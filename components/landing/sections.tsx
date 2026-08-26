@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import { useEffect, useRef } from "react";
+import { media, type ProjectImageId } from "@/app/data/media";
 import { Locale, translateContent } from "@/app/data/site-content";
 import { LogoYg } from "@/components/landing/logo-yg";
 
@@ -129,10 +130,12 @@ export function HeroSection({ onOpenContact, locale }: ContactActionProps) {
     <section id="top" className="relative flex min-h-[100svh] items-end overflow-hidden pb-20 pt-32 md:items-center md:pb-24">
       <div className="absolute inset-0">
         <Image
-          src="/hero-atmosphere.jpg"
-          alt=""
+          src={media.heroAtmosphere}
+          alt="Atmospheric architectural interior representing systematic, automated operations"
           fill
           priority
+          fetchPriority="high"
+          placeholder="blur"
           sizes="100vw"
           className="hero-media object-cover"
         />
@@ -234,11 +237,12 @@ export function PhilosophySection() {
       <div className="mx-auto grid max-w-7xl gap-12 md:grid-cols-[240px_1fr] md:items-center md:gap-16">
         <div className="relative mx-auto aspect-[3/4] w-48 overflow-hidden md:mx-0 md:w-full">
           <Image
-            src="/profile-portrait.jpg"
-            alt="Yevgen Galamaga"
+            src={media.profilePortrait}
+            alt="Portrait of Yevgen Galamaga, AI automation architect"
             fill
-            sizes="240px"
-            priority
+            sizes="(min-width: 768px) 240px, 192px"
+            loading="lazy"
+            placeholder="blur"
             className="object-cover"
           />
         </div>
@@ -295,10 +299,12 @@ export function ProjectsSection({ locale }: { locale: Locale }) {
             </div>
             <div className={`relative aspect-[4/3] overflow-hidden bg-[var(--surface-low)] ${index % 2 ? "lg:order-1" : ""}`}>
               <Image
-                src={project.image}
-                alt={project.title}
+                src={media.projects[project.id as ProjectImageId]}
+                alt={`${project.title}: ${project.description}`}
                 fill
                 sizes="(min-width: 1024px) 50vw, 100vw"
+                loading="lazy"
+                placeholder="blur"
                 className="object-cover transition-transform duration-700 ease-out hover:scale-[1.03]"
               />
             </div>
