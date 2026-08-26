@@ -50,7 +50,7 @@ function BrandMark({ className = "" }: { className?: string }) {
   return (
     <span className={`inline-flex items-center gap-3 ${className}`}>
       <LogoYg className="h-8 w-auto shrink-0 text-[var(--primary)] md:h-9" />
-      <span className="font-display text-base font-semibold tracking-[-0.02em] text-foreground md:text-lg">
+      <span className="font-display hidden text-base font-semibold tracking-[-0.02em] text-foreground md:inline md:text-lg">
         Yevgen Galamaga
       </span>
     </span>
