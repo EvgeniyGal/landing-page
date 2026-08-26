@@ -212,6 +212,14 @@ export const copy = {
     en: "[ Hire_Me ]",
     uk: "[ Обговорити_проєкт ]",
   },
+  openMenu: {
+    en: "Open menu",
+    uk: "Відкрити меню",
+  },
+  closeMenu: {
+    en: "Close menu",
+    uk: "Закрити меню",
+  },
   impactMetrics: {
     en: "[ impact_metrics ]",
     uk: "[ impact_metrics ]",
@@ -327,6 +335,8 @@ export function translateContent(locale: Locale) {
     copy: {
       navItems: copy.navItems[locale],
       hireMe: copy.hireMe[locale],
+      openMenu: copy.openMenu[locale],
+      closeMenu: copy.closeMenu[locale],
       impactMetrics: copy.impactMetrics[locale],
       proofTitle: copy.proofTitle[locale],
       capabilities: copy.capabilities[locale],

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { media, type ProjectImageId } from "@/app/data/media";
 import { getOfferAgreement } from "@/app/data/offer-agreement";
 import { Locale, translateContent } from "@/app/data/site-content";
@@ -57,8 +57,57 @@ function BrandMark({ className = "" }: { className?: string }) {
   );
 }
 
+function LocaleToggle({ locale, onLocaleChange }: { locale: Locale; onLocaleChange: (locale: Locale) => void }) {
+  return (
+    <div className="flex items-center border border-[var(--hairline)] bg-[var(--surface-high)] p-0.5">
+      <button
+        type="button"
+        onClick={() => onLocaleChange("en")}
+        className={`label-mono px-2.5 py-1 ${
+          locale === "en" ? "bg-[var(--primary)] text-[var(--surface-high)]" : "text-[var(--muted)]"
+        }`}
+      >
+        EN
+      </button>
+      <button
+        type="button"
+        onClick={() => onLocaleChange("uk")}
+        className={`label-mono px-2.5 py-1 ${
+          locale === "uk" ? "bg-[var(--primary)] text-[var(--surface-high)]" : "text-[var(--muted)]"
+        }`}
+      >
+        UA
+      </button>
+    </div>
+  );
+}
+
+function ThemeSelect({
+  theme,
+  onThemeChange,
+  className = "",
+}: {
+  theme: ThemeMode;
+  onThemeChange: (theme: ThemeMode) => void;
+  className?: string;
+}) {
+  return (
+    <select
+      value={theme}
+      onChange={(event) => onThemeChange(event.target.value as ThemeMode)}
+      aria-label="Theme switcher"
+      className={`label-mono appearance-none border border-[var(--hairline)] bg-[var(--surface-high)] px-2 py-1.5 text-[var(--muted)] outline-none ${className}`}
+    >
+      <option value="light">Light</option>
+      <option value="dark">Dark</option>
+      <option value="system">System</option>
+    </select>
+  );
+}
+
 export function TopNav({ onOpenContact, locale, theme, onThemeChange, onLocaleChange }: TopNavProps) {
   const content = translateContent(locale);
+  const [isMenuOpen, setIsMenuOpen] = useState(false);
   const navItems = [
     { href: "#services", label: content.copy.navItems[0] },
     { href: "#projects", label: content.copy.navItems[1] },
@@ -66,10 +115,40 @@ export function TopNav({ onOpenContact, locale, theme, onThemeChange, onLocaleCh
     { href: "#edge", label: content.copy.navItems[3] },
   ];
 
+  useEffect(() => {
+    if (!isMenuOpen) {
+      return;
+    }
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const media = window.matchMedia("(min-width: 768px)");
+    const onViewportChange = () => {
+      if (media.matches) {
+        setIsMenuOpen(false);
+      }
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.addEventListener("keydown", onKeyDown);
+    media.addEventListener("change", onViewportChange);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      document.removeEventListener("keydown", onKeyDown);
+      media.removeEventListener("change", onViewportChange);
+    };
+  }, [isMenuOpen]);
+
   return (
     <nav className="fixed top-0 z-50 w-full border-b border-[var(--hairline)] bg-background/90 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-7xl items-center justify-between px-6 py-4 md:px-8">
-        <a href="#top" className="shrink-0">
+      <div className="relative z-50 mx-auto flex w-full max-w-7xl items-center justify-between gap-3 px-6 py-4 md:px-8">
+        <a href="#top" className="shrink-0" onClick={() => setIsMenuOpen(false)}>
           <BrandMark />
         </a>
         <div className="hidden items-center gap-8 md:flex">
@@ -82,43 +161,72 @@ export function TopNav({ onOpenContact, locale, theme, onThemeChange, onLocaleCh
               {link.label}
             </a>
           ))}
-          <div className="flex items-center gap-2">
-            <div className="flex items-center border border-[var(--hairline)] bg-[var(--surface-high)] p-0.5">
-              <button
-                type="button"
-                onClick={() => onLocaleChange("en")}
-                className={`label-mono px-2.5 py-1 ${
-                  locale === "en" ? "bg-[var(--primary)] text-[var(--surface-high)]" : "text-[var(--muted)]"
-                }`}
-              >
-                EN
-              </button>
-              <button
-                type="button"
-                onClick={() => onLocaleChange("uk")}
-                className={`label-mono px-2.5 py-1 ${
-                  locale === "uk" ? "bg-[var(--primary)] text-[var(--surface-high)]" : "text-[var(--muted)]"
-                }`}
-              >
-                UA
-              </button>
-            </div>
-            <select
-              value={theme}
-              onChange={(event) => onThemeChange(event.target.value as ThemeMode)}
-              aria-label="Theme switcher"
-              className="label-mono appearance-none border border-[var(--hairline)] bg-[var(--surface-high)] px-2 py-1.5 text-[var(--muted)] outline-none"
-            >
-              <option value="light">Light</option>
-              <option value="dark">Dark</option>
-              <option value="system">System</option>
-            </select>
-          </div>
         </div>
-        <button type="button" onClick={onOpenContact} className="ink-button label-mono px-5 py-2.5">
-          {content.copy.hireMe}
+        <div className="hidden shrink-0 items-center gap-2 md:flex">
+          <LocaleToggle locale={locale} onLocaleChange={onLocaleChange} />
+          <ThemeSelect theme={theme} onThemeChange={onThemeChange} />
+          <button type="button" onClick={onOpenContact} className="ink-button label-mono px-5 py-2.5">
+            {content.copy.hireMe}
+          </button>
+        </div>
+        <button
+          type="button"
+          className="relative flex h-10 w-10 items-center justify-center border border-[var(--hairline)] bg-[var(--surface-high)] md:hidden"
+          aria-expanded={isMenuOpen}
+          aria-controls="mobile-menu"
+          aria-label={isMenuOpen ? content.copy.closeMenu : content.copy.openMenu}
+          onClick={() => setIsMenuOpen((open) => !open)}
+        >
+          <span
+            className={`absolute h-px w-4 bg-foreground transition-transform ${isMenuOpen ? "rotate-45" : "-translate-y-1.5"}`}
+          />
+          <span className={`absolute h-px w-4 bg-foreground transition-opacity ${isMenuOpen ? "opacity-0" : ""}`} />
+          <span
+            className={`absolute h-px w-4 bg-foreground transition-transform ${isMenuOpen ? "-rotate-45" : "translate-y-1.5"}`}
+          />
         </button>
       </div>
+      {isMenuOpen ? (
+        <>
+          <button
+            type="button"
+            className="fixed inset-0 z-40 bg-[rgba(18,18,18,0.35)] md:hidden"
+            aria-label={content.copy.closeMenu}
+            onClick={() => setIsMenuOpen(false)}
+          />
+          <div
+            id="mobile-menu"
+            className="absolute inset-x-0 top-full z-50 border-b border-[var(--hairline)] bg-background/95 backdrop-blur-md md:hidden"
+          >
+            <div className="mx-auto flex max-w-7xl flex-col gap-6 px-6 py-6">
+              {navItems.map((link) => (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="label-mono text-[var(--muted)] transition-colors hover:text-foreground"
+                  onClick={() => setIsMenuOpen(false)}
+                >
+                  {link.label}
+                </a>
+              ))}
+              <div className="flex flex-wrap items-center gap-2">
+                <LocaleToggle locale={locale} onLocaleChange={onLocaleChange} />
+                <ThemeSelect theme={theme} onThemeChange={onThemeChange} />
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsMenuOpen(false);
+                  onOpenContact();
+                }}
+                className="ink-button label-mono self-start px-5 py-2.5"
+              >
+                {content.copy.hireMe}
+              </button>
+            </div>
+          </div>
+        </>
+      ) : null}
     </nav>
   );
 }
