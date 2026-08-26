@@ -132,7 +132,7 @@ export const projects: Project[] = [
     id: "school",
     emoji: { en: "🏫", uk: "🏫" },
     title: { en: "School Management System", uk: "Система управління школою" },
-    image: "/school-management-system.webp",
+    image: "/school-management-system.jpg",
     description: {
       en: "A full-stack platform that unified scheduling, attendance, operations, and financial workflows into one controlled environment.",
       uk: "Full-stack платформа, що об'єднала розклад, відвідуваність, операційні та фінансові процеси в єдине кероване середовище.",
@@ -154,7 +154,7 @@ export const projects: Project[] = [
     id: "docs",
     emoji: { en: "📄", uk: "📄" },
     title: { en: "Document Lifecycle System", uk: "Система життєвого циклу документів" },
-    image: "/document-life-cycle.webp",
+    image: "/document-life-cycle.jpg",
     description: {
       en: "A digital workflow for generating, approving, signing, and archiving documents with transparent status at every stage.",
       uk: "Цифровий контур для створення, погодження, підпису та архівації документів із прозорим статусом на кожному етапі.",
@@ -173,7 +173,7 @@ export const projects: Project[] = [
     id: "content",
     emoji: { en: "🤖", uk: "🤖" },
     title: { en: "AI Content Pipeline", uk: "AI-контент конвеєр" },
-    image: "/ai-content-pipeline.webp",
+    image: "/ai-content-pipeline.jpg",
     description: {
       en: "An automation pipeline with n8n and APIs for high-volume content production, formatting, and publishing across channels.",
       uk: "Автоматизований конвеєр на n8n та API для масштабного створення, форматування й публікації контенту в різних каналах.",

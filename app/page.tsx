@@ -22,11 +22,11 @@ export default function Home() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [theme, setTheme] = useState<ThemeMode>(() => {
     if (typeof window === "undefined") {
-      return "dark";
+      return "light";
     }
 
     const savedTheme = window.localStorage.getItem("theme-mode");
-    return savedTheme === "light" || savedTheme === "dark" || savedTheme === "system" ? savedTheme : "dark";
+    return savedTheme === "light" || savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
   });
   const [locale, setLocale] = useState<Locale>(() => {
     if (typeof window === "undefined") {

@@ -1,36 +1,41 @@
 @import "tailwindcss";
 
 :root {
-  --background: #f4f7ff;
-  --foreground: #101a2f;
-  --surface-low: #e8eefc;
-  --surface-high: #f8fbff;
-  --surface-bright: #d8e2f7;
-  --primary: #2563eb;
-  --primary-strong: #1d4ed8;
-  --secondary: #7c3aed;
-  --tertiary: #0891b2;
-  --muted: #5b6880;
+  --background: #fafafa;
+  --foreground: #121212;
+  --surface-low: #f0f0f0;
+  --surface-high: #ffffff;
+  --surface-bright: #e8e8e8;
+  --primary: #0b1f3a;
+  --primary-strong: #061428;
+  --secondary: #3a3a3a;
+  --tertiary: #5c5c5c;
+  --muted: #5c5c5c;
+  --hairline: rgba(18, 18, 18, 0.12);
+  --scrim: rgba(250, 250, 250, 0.78);
 }
 
 html.dark {
-  --background: #0b1326;
-  --foreground: #dae2fd;
-  --surface-low: #131b2e;
-  --surface-high: #222a3d;
-  --surface-bright: #31394d;
-  --primary: #98cbff;
-  --primary-strong: #00a3ff;
-  --secondary: #d0bcff;
-  --tertiary: #4cd7f6;
-  --muted: #bec7d4;
+  --background: #121212;
+  --foreground: #f2f2f2;
+  --surface-low: #1a1a1a;
+  --surface-high: #222222;
+  --surface-bright: #2a2a2a;
+  --primary: #e8eef5;
+  --primary-strong: #ffffff;
+  --secondary: #c8c8c8;
+  --tertiary: #a0a0a0;
+  --muted: #a0a0a0;
+  --hairline: rgba(242, 242, 242, 0.14);
+  --scrim: rgba(18, 18, 18, 0.72);
 }
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+  --font-sans: var(--font-ibm-plex-sans);
+  --font-display: var(--font-archivo);
+  --font-mono: var(--font-ibm-plex-mono);
 }
 
 html,
@@ -40,8 +45,17 @@ body {
 
 body {
   background: var(--background);
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(11, 31, 58, 0.04), transparent 55%),
+    linear-gradient(180deg, #fafafa 0%, #f5f5f5 100%);
   color: var(--foreground);
-  font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+  font-family: var(--font-ibm-plex-sans), Arial, Helvetica, sans-serif;
+}
+
+html.dark body {
+  background-image:
+    radial-gradient(ellipse 90% 60% at 50% -10%, rgba(232, 238, 245, 0.05), transparent 55%),
+    linear-gradient(180deg, #121212 0%, #161616 100%);
 }
 
 button,
@@ -58,24 +72,79 @@ input[type="reset"]:disabled {
   cursor: not-allowed;
 }
 
-.section-shell {
-  background-image: radial-gradient(rgba(136, 145, 157, 0.08) 1px, transparent 1px);
-  background-size: 30px 30px;
+.font-display {
+  font-family: var(--font-archivo), var(--font-ibm-plex-sans), Arial, Helvetica, sans-serif;
 }
 
-.glass-card {
-  background: color-mix(in srgb, var(--surface-low) 82%, transparent);
-  border: 1px solid rgba(136, 145, 157, 0.18);
-  backdrop-filter: blur(12px);
+.label-mono {
+  font-family: var(--font-ibm-plex-mono), ui-monospace, monospace;
+  font-size: 0.6875rem;
+  font-weight: 500;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
 }
 
-.primary-glow {
-  box-shadow: 0 0 30px rgba(152, 203, 255, 0.26);
+.hairline {
+  border-color: var(--hairline);
 }
 
-.gradient-text {
-  background: linear-gradient(90deg, var(--primary), var(--tertiary));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+.tonal-section {
+  background: var(--surface-low);
+}
+
+.ink-button {
+  background: var(--primary);
+  color: var(--surface-high);
+  transition: background-color 180ms ease, transform 180ms ease;
+}
+
+.ink-button:hover {
+  background: var(--primary-strong);
+}
+
+html.dark .ink-button {
+  color: var(--background);
+}
+
+.reveal {
+  opacity: 0;
+  transform: translateY(18px);
+  transition:
+    opacity 700ms cubic-bezier(0.22, 1, 0.36, 1),
+    transform 700ms cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+@keyframes hero-ken {
+  from {
+    transform: scale(1.06);
+    opacity: 0.55;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.hero-media {
+  animation: hero-ken 1.8s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hero-copy {
+  animation: fade-up 900ms cubic-bezier(0.22, 1, 0.36, 1) 180ms both;
 }

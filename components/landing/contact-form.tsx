@@ -63,20 +63,20 @@ export function ContactForm({ isOpen, onClose, locale }: ContactFormProps) {
   }
 
   return (
-    <section className="fixed inset-0 z-[60] flex items-center justify-center bg-[#040917]/80 px-4 backdrop-blur-sm">
-      <div className="w-full max-w-3xl rounded-2xl border border-white/15 bg-[var(--surface-high)] p-8 shadow-[0_25px_70px_rgba(0,0,0,0.55)]">
+    <section className="fixed inset-0 z-[60] flex items-center justify-center bg-[rgba(18,18,18,0.45)] px-4 backdrop-blur-sm">
+      <div className="w-full max-w-2xl border border-[var(--hairline)] bg-[var(--surface-high)] p-8 shadow-[0_24px_80px_rgba(18,18,18,0.18)]">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-2xl font-bold">{content.title}</h3>
+            <h3 className="font-display text-2xl font-semibold tracking-[-0.02em]">{content.title}</h3>
             <p className="mt-2 text-sm text-[var(--muted)]">{content.subtitle}</p>
           </div>
           <button
             type="button"
             onClick={onClose}
             aria-label={content.closeAria}
-            className="rounded border border-white/20 px-3 py-1 text-xs font-bold uppercase tracking-[0.14em] text-[var(--muted)] hover:border-[var(--primary)] hover:text-[var(--primary)]"
+            className="label-mono border border-[var(--hairline)] px-3 py-1 text-[var(--muted)] hover:text-foreground"
           >
-            X
+            Close
           </button>
         </div>
         <form onSubmit={handleSubmit} className="space-y-4">
@@ -86,7 +86,7 @@ export function ContactForm({ isOpen, onClose, locale }: ContactFormProps) {
               required
               value={form.name}
               onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-              className="w-full rounded border border-white/15 bg-background px-3 py-2 outline-none focus:border-[var(--primary)]"
+              className="w-full border border-[var(--hairline)] bg-background px-3 py-2.5 outline-none focus:border-[var(--primary)]"
             />
           </label>
           <label className="block text-sm">
@@ -96,7 +96,7 @@ export function ContactForm({ isOpen, onClose, locale }: ContactFormProps) {
               type="email"
               value={form.email}
               onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-              className="w-full rounded border border-white/15 bg-background px-3 py-2 outline-none focus:border-[var(--primary)]"
+              className="w-full border border-[var(--hairline)] bg-background px-3 py-2.5 outline-none focus:border-[var(--primary)]"
             />
           </label>
           <label className="block text-sm">
@@ -104,7 +104,7 @@ export function ContactForm({ isOpen, onClose, locale }: ContactFormProps) {
             <input
               value={form.company}
               onChange={(event) => setForm((prev) => ({ ...prev, company: event.target.value }))}
-              className="w-full rounded border border-white/15 bg-background px-3 py-2 outline-none focus:border-[var(--primary)]"
+              className="w-full border border-[var(--hairline)] bg-background px-3 py-2.5 outline-none focus:border-[var(--primary)]"
             />
           </label>
           <label className="block text-sm">
@@ -114,19 +114,15 @@ export function ContactForm({ isOpen, onClose, locale }: ContactFormProps) {
               rows={5}
               value={form.message}
               onChange={(event) => setForm((prev) => ({ ...prev, message: event.target.value }))}
-              className="w-full rounded border border-white/15 bg-background px-3 py-2 outline-none focus:border-[var(--primary)]"
+              className="w-full border border-[var(--hairline)] bg-background px-3 py-2.5 outline-none focus:border-[var(--primary)]"
             />
           </label>
-          <button
-            type="submit"
-            disabled={status === "loading"}
-            className="rounded bg-[var(--primary)] px-5 py-3 text-sm font-bold uppercase tracking-wide text-slate-900 disabled:cursor-not-allowed disabled:opacity-60"
-          >
+          <button type="submit" disabled={status === "loading"} className="ink-button label-mono px-6 py-3 disabled:opacity-60">
             {status === "loading" ? content.sending : content.send}
           </button>
         </form>
         {feedback ? (
-          <p className={`mt-4 text-sm ${status === "error" ? "text-red-300" : "text-emerald-300"}`}>{feedback}</p>
+          <p className={`mt-4 text-sm ${status === "error" ? "text-red-700" : "text-emerald-700"}`}>{feedback}</p>
         ) : null}
       </div>
     </section>
