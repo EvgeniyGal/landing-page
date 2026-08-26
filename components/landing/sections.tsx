@@ -3,6 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef } from "react";
 import { media, type ProjectImageId } from "@/app/data/media";
+import { getOfferAgreement } from "@/app/data/offer-agreement";
 import { Locale, translateContent } from "@/app/data/site-content";
 import { LogoYg } from "@/components/landing/logo-yg";
 
@@ -430,8 +431,9 @@ export function CtaBanner({ onOpenContact, locale }: ContactActionProps) {
   );
 }
 
-export function SiteFooter({ locale }: { locale: Locale }) {
+export function SiteFooter({ locale, onOpenOffer }: { locale: Locale; onOpenOffer: () => void }) {
   const content = translateContent(locale);
+  const offer = getOfferAgreement(locale);
   return (
     <footer className="border-t border-[var(--hairline)] bg-background px-6 py-16 md:px-8">
       <div className="mx-auto flex max-w-7xl flex-col items-start gap-10 md:flex-row md:items-center md:justify-between">
@@ -467,6 +469,13 @@ export function SiteFooter({ locale }: { locale: Locale }) {
           <a href="mailto:evgeniygal@gmail.com" className="label-mono text-[var(--muted)] transition-colors hover:text-foreground">
             Email
           </a>
+          <button
+            type="button"
+            onClick={onOpenOffer}
+            className="label-mono text-[var(--muted)] transition-colors hover:text-foreground"
+          >
+            {offer.linkLabel}
+          </button>
         </div>
       </div>
     </footer>

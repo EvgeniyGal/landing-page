@@ -22,28 +22,40 @@ const ContactForm = dynamic(
   { ssr: false },
 );
 
+const OfferAgreementModal = dynamic(
+  () => import("@/components/landing/offer-agreement").then((mod) => mod.OfferAgreementModal),
+  { ssr: false },
+);
+
 type ThemeMode = "light" | "dark" | "system";
 
 export function LandingPage() {
   const [isContactOpen, setIsContactOpen] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode>(() => {
-    if (typeof window === "undefined") {
-      return "light";
-    }
-
-    const savedTheme = window.localStorage.getItem("theme-mode");
-    return savedTheme === "light" || savedTheme === "dark" || savedTheme === "system" ? savedTheme : "light";
-  });
-  const [locale, setLocale] = useState<Locale>(() => {
-    if (typeof window === "undefined") {
-      return "en";
-    }
-
-    const savedLocale = window.localStorage.getItem("site-locale");
-    return savedLocale === "en" || savedLocale === "uk" ? savedLocale : "en";
-  });
+  const [isOfferOpen, setIsOfferOpen] = useState(false);
+  const [theme, setTheme] = useState<ThemeMode>("light");
+  const [locale, setLocale] = useState<Locale>("en");
+  const [prefsReady, setPrefsReady] = useState(false);
 
   useEffect(() => {
+    const savedTheme = window.localStorage.getItem("theme-mode");
+    const savedLocale = window.localStorage.getItem("site-locale");
+
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "system") {
+      setTheme(savedTheme);
+    }
+
+    if (savedLocale === "en" || savedLocale === "uk") {
+      setLocale(savedLocale);
+    }
+
+    setPrefsReady(true);
+  }, []);
+
+  useEffect(() => {
+    if (!prefsReady) {
+      return;
+    }
+
     const root = document.documentElement;
     const media = window.matchMedia("(prefers-color-scheme: dark)");
 
@@ -57,15 +69,19 @@ export function LandingPage() {
     window.localStorage.setItem("theme-mode", theme);
 
     return () => media.removeEventListener("change", applyTheme);
-  }, [theme]);
+  }, [theme, prefsReady]);
 
   useEffect(() => {
+    if (!prefsReady) {
+      return;
+    }
+
     const meta = homeDocumentMeta[locale];
     document.documentElement.lang = locale === "uk" ? "uk" : "en";
     document.title = meta.title;
     document.querySelector('meta[name="description"]')?.setAttribute("content", meta.description);
     window.localStorage.setItem("site-locale", locale);
-  }, [locale]);
+  }, [locale, prefsReady]);
 
   return (
     <>
@@ -88,8 +104,11 @@ export function LandingPage() {
         {isContactOpen ? (
           <ContactForm locale={locale} isOpen onClose={() => setIsContactOpen(false)} />
         ) : null}
+        {isOfferOpen ? (
+          <OfferAgreementModal locale={locale} isOpen onClose={() => setIsOfferOpen(false)} />
+        ) : null}
       </main>
-      <SiteFooter locale={locale} />
+      <SiteFooter locale={locale} onOpenOffer={() => setIsOfferOpen(true)} />
     </>
   );
 }

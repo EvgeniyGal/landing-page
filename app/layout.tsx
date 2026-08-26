@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
-import { getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
+import { getHomeJsonLd, getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -26,6 +27,8 @@ const ibmPlexMono = IBM_Plex_Mono({
   display: "swap",
   preload: false,
 });
+
+const themeBootstrapScript = `(function(){try{var mode=localStorage.getItem("theme-mode");var dark=mode==="dark"||(mode==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",dark);}catch(e){}})();`;
 
 export const viewport: Viewport = {
   themeColor: [
@@ -73,14 +76,15 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${archivo.variable} ${ibmPlexSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
     >
-      <head>
-        <script
-          dangerouslySetInnerHTML={{
-            __html: `(function(){try{var mode=localStorage.getItem("theme-mode");var dark=mode==="dark"||(mode==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",dark);}catch(e){}})();`,
-          }}
-        />
-      </head>
       <body className="min-h-full flex flex-col">
+        <Script id="theme-bootstrap" strategy="beforeInteractive">
+          {themeBootstrapScript}
+        </Script>
+        <Script
+          id="ld-json"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(getHomeJsonLd()) }}
+        />
         <noscript>
           <style>{`.reveal{opacity:1;transform:none}`}</style>
         </noscript>

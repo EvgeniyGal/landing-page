@@ -13,6 +13,11 @@
   --muted: #5c5c5c;
   --hairline: rgba(18, 18, 18, 0.12);
   --scrim: rgba(250, 250, 250, 0.78);
+  --scrollbar-size: 10px;
+  --scrollbar-track: #f0f0f0;
+  --scrollbar-thumb: rgba(11, 31, 58, 0.2);
+  --scrollbar-thumb-hover: rgba(11, 31, 58, 0.38);
+  color-scheme: light;
 }
 
 html.dark {
@@ -28,6 +33,10 @@ html.dark {
   --muted: #a0a0a0;
   --hairline: rgba(242, 242, 242, 0.14);
   --scrim: rgba(18, 18, 18, 0.72);
+  --scrollbar-track: #1a1a1a;
+  --scrollbar-thumb: rgba(232, 238, 245, 0.22);
+  --scrollbar-thumb-hover: rgba(232, 238, 245, 0.4);
+  color-scheme: dark;
 }
 
 @theme inline {
@@ -41,6 +50,34 @@ html.dark {
 html,
 body {
   min-height: 100%;
+}
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+*::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+*::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border: 2px solid var(--scrollbar-track);
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+}
+
+*::-webkit-scrollbar-corner {
+  background: var(--scrollbar-track);
 }
 
 body {
