@@ -13,6 +13,16 @@
   --muted: #5c5c5c;
   --hairline: rgba(18, 18, 18, 0.12);
   --scrim: rgba(250, 250, 250, 0.78);
+  --card: var(--surface-high);
+  --card-foreground: var(--foreground);
+  --primary-foreground: #fafafa;
+  --secondary-foreground: var(--foreground);
+  --muted-foreground: var(--muted);
+  --border: var(--hairline);
+  --input: var(--hairline);
+  --ring: var(--primary);
+  --destructive: #b42318;
+  --radius: 0.625rem;
   --scrollbar-size: 10px;
   --scrollbar-track: #f0f0f0;
   --scrollbar-thumb: rgba(11, 31, 58, 0.2);
@@ -33,6 +43,8 @@ html.dark {
   --muted: #a0a0a0;
   --hairline: rgba(242, 242, 242, 0.14);
   --scrim: rgba(18, 18, 18, 0.72);
+  --primary-foreground: #121212;
+  --destructive: #f97066;
   --scrollbar-track: #1a1a1a;
   --scrollbar-thumb: rgba(232, 238, 245, 0.22);
   --scrollbar-thumb-hover: rgba(232, 238, 245, 0.4);
@@ -42,6 +54,21 @@ html.dark {
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--surface-bright);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--surface-low);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-destructive: var(--destructive);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
   --font-sans: var(--font-ibm-plex-sans);
   --font-display: var(--font-archivo);
   --font-mono: var(--font-ibm-plex-mono);
