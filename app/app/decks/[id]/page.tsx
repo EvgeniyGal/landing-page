@@ -3,7 +3,9 @@ import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { SpeakerButton } from "@/components/app/speaker-button";
 import { getDeckDetail } from "@/lib/flashcard/queries";
+import { audioPlaybackPath } from "@/lib/flashcard/audio";
 import { cardPayload } from "@/lib/flashcard/create";
+import { formatBackDefinition } from "@/lib/flashcard/format";
 
 function statusLabel(state: string) {
   if (state === "new") {
@@ -64,7 +66,9 @@ export default async function DeckPage({ params }: { params: Promise<{ id: strin
         {detail.cards.map((card, index) => {
           const payload = cardPayload(card);
           const status = statusLabel(card.state);
-          const audio = Object.fromEntries(card.audio.map((item) => [item.kind, item.blobUrl]));
+          const audio = Object.fromEntries(
+            card.audio.map((item) => [item.kind, audioPlaybackPath(card.id, item.kind)]),
+          );
           return (
             <li key={card.id} className={index > 0 ? "border-t border-white/8" : undefined}>
               <div className="flex items-center gap-4 px-5 py-4">
@@ -73,11 +77,15 @@ export default async function DeckPage({ params }: { params: Promise<{ id: strin
                     {payload?.irregularForms || payload?.word || card.inputText}
                   </p>
                   <p className="truncate text-sm text-white/45">
-                    {payload?.definition || payload?.transcription || card.outputText.slice(0, 80)}
+                    {payload
+                      ? formatBackDefinition(payload.definition, payload.partOfSpeech)
+                      : card.outputText.slice(0, 80)}
                   </p>
                 </div>
                 <span className={`rounded-full px-2.5 py-1 text-xs ${status.className}`}>{status.label}</span>
-                <SpeakerButton flashcardId={card.id} kind="word" url={audio.word} />
+                {audio.word ? (
+                  <SpeakerButton flashcardId={card.id} kind="word" url={audio.word} generateOnPlay={false} />
+                ) : null}
               </div>
             </li>
           );

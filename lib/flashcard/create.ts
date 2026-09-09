@@ -3,7 +3,7 @@ import { getDb } from "@/lib/db";
 import { flashcards } from "@/lib/db/schema";
 import { getOrCreateSettings } from "@/lib/db/settings";
 import { getDeckForUser, getOrCreateDefaultDeck } from "@/lib/flashcard/decks";
-import { formatFlashcardText } from "@/lib/flashcard/format";
+import { formatFlashcardText, stripDuplicatePosPrefix } from "@/lib/flashcard/format";
 import { generateFlashcardContent } from "@/lib/openai/generate";
 import { newCardSchedule } from "@/lib/srs/sm2";
 import type { GeneratedCard } from "@/lib/flashcard/schema";
@@ -49,7 +49,7 @@ export async function createFlashcardForUser(input: {
       transcription: card.transcription,
       irregularForms: card.irregularForms,
       examples: card.examples,
-      definition: card.definition,
+      definition: stripDuplicatePosPrefix(card.definition, card.partOfSpeech),
       state: schedule.state,
       stepIndex: schedule.stepIndex,
       ease: schedule.ease,

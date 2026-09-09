@@ -57,12 +57,22 @@ export async function sendTelegramMessage(
   });
 }
 
-export async function sendTelegramAudio(token: string, chatId: number, audioUrl: string, title?: string) {
-  await telegramApi(token, "sendAudio", {
-    chat_id: chatId,
-    audio: audioUrl,
-    title,
+export async function sendTelegramAudio(token: string, chatId: number, audio: Buffer, title?: string) {
+  const form = new FormData();
+  form.append("chat_id", String(chatId));
+  form.append("audio", new Blob([new Uint8Array(audio)], { type: "audio/mpeg" }), `${title ?? "audio"}.mp3`);
+  if (title) {
+    form.append("title", title);
+  }
+
+  const response = await fetch(`https://api.telegram.org/bot${token}/sendAudio`, {
+    method: "POST",
+    body: form,
   });
+  const json = (await response.json()) as TelegramApiResponse<unknown>;
+  if (!json.ok) {
+    throw new Error(json.description || "Telegram sendAudio failed");
+  }
 }
 
 export async function answerCallbackQuery(token: string, callbackQueryId: string, text?: string) {

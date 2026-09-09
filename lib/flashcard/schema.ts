@@ -41,4 +41,4 @@ If the input is a phrase, treat the whole phrase as the headword.
 Use IPA transcription.
 If the headword is an irregular verb, set irregularForms to the three forms like go/went/gone; otherwise null.
 Write three natural example sentences.
-Write a short definition in simple words.`;
+Write a short definition in simple words. Do not start the definition with the part of speech.`;

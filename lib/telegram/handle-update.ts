@@ -3,6 +3,7 @@ import { getOrCreateSettings } from "@/lib/db/settings";
 import { AUDIO_KINDS, getOrCreateAudioBatch } from "@/lib/flashcard/audio";
 import { createFlashcardForUser } from "@/lib/flashcard/create";
 import { isTtsConfigured } from "@/lib/elevenlabs/tts";
+import { readAudioBlob } from "@/lib/storage/blob";
 import { answerCallbackQuery, sendTelegramAudio, sendTelegramMessage, type InlineKeyboard } from "./api";
 import { findUserIdByTelegram, linkTelegramAccount } from "./linking";
 import { splitTelegramMessage } from "./messages";
@@ -99,7 +100,7 @@ async function handleCallback(update: TelegramUpdate) {
       await sendTelegramMessage(token, chatId, TTS_UNAVAILABLE_REPLY);
       return;
     }
-    await sendTelegramAudio(token, chatId, item.result.url, item.kind);
+    await sendTelegramAudio(token, chatId, await readAudioBlob(item.result.url), item.kind);
   }
 }
 

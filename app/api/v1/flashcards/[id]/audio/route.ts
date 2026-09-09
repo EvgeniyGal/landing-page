@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { userFromApiRequest } from "@/lib/api/session";
-import { AUDIO_KINDS, getOrCreateAudioBatch, parseAudioKind } from "@/lib/flashcard/audio";
+import { AUDIO_KINDS, audioPlaybackPath, getOrCreateAudioBatch, parseAudioKind } from "@/lib/flashcard/audio";
 
 const schema = z.object({
   kind: z.string(),
@@ -32,7 +32,7 @@ export async function POST(
   const firstFailure = items.find((item) => !item.result.ok);
   if (firstFailure && !firstFailure.result.ok) {
     const status =
-      firstFailure.result.reason === "tts_not_configured"
+      firstFailure.result.reason === "tts_not_configured" || firstFailure.result.reason === "voice_restricted"
         ? 503
         : firstFailure.result.reason === "not_found"
           ? 404
@@ -44,7 +44,7 @@ export async function POST(
     audio: Object.fromEntries(
       items
         .filter((item) => item.result.ok)
-        .map((item) => [item.kind, item.result.ok ? item.result.url : ""]),
+        .map((item) => [item.kind, item.result.ok ? audioPlaybackPath(id, item.kind) : ""]),
     ),
   });
 }

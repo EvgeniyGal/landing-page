@@ -1,6 +1,8 @@
+"use server";
+
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { AUDIO_KINDS, getOrCreateAudio, parseAudioKind } from "@/lib/flashcard/audio";
+import { AUDIO_KINDS, audioPlaybackPath, getOrCreateAudio, parseAudioKind } from "@/lib/flashcard/audio";
 import { createFlashcardForUser } from "@/lib/flashcard/create";
 import { serializeFlashcard } from "@/lib/api/serialize";
 import { reviewCard } from "@/lib/srs/review";
@@ -35,30 +37,52 @@ export async function createCardAction(input: { deckId: string; word: string }) 
   }
 }
 
-export async function requestAudioAction(input: { flashcardId: string; kind: string }) {
+export async function requestAudioAction(input: { flashcardId: string; kind?: string; kinds?: string[] }) {
   const user = await requireLearner();
-  const kind = parseAudioKind(input.kind);
-  if (!kind) {
-    return { ok: false as const, error: "Invalid audio kind." };
-  }
-  const kinds = kind === "all_examples" ? AUDIO_KINDS.filter((item) => item !== "word") : [kind];
-  const urls: Record<string, string> = {};
-  for (const item of kinds) {
-    const result = await getOrCreateAudio({
-      userId: user.id,
-      flashcardId: input.flashcardId,
-      kind: item,
-    });
-    if (!result.ok) {
-      const error =
-        result.reason === "tts_not_configured"
-          ? "Voice is not configured yet."
-          : "Could not generate audio.";
-      return { ok: false as const, error };
+  const requested = input.kinds?.length ? input.kinds : input.kind ? [input.kind] : [];
+  const kinds: (typeof AUDIO_KINDS)[number][] = [];
+  for (const value of requested) {
+    const parsed = parseAudioKind(value);
+    if (!parsed) {
+      return { ok: false as const, error: "Invalid audio kind." };
     }
-    urls[item] = result.url;
+    if (parsed === "all_examples") {
+      kinds.push(...AUDIO_KINDS.filter((item) => item !== "word"));
+    } else {
+      kinds.push(parsed);
+    }
   }
-  return { ok: true as const, audio: urls };
+  const uniqueKinds = [...new Set(kinds)];
+  if (!uniqueKinds.length) {
+    return { ok: false as const, error: "Select at least one clip." };
+  }
+  const urls: Record<string, string> = {};
+  try {
+    for (const item of uniqueKinds) {
+      const result = await getOrCreateAudio({
+        userId: user.id,
+        flashcardId: input.flashcardId,
+        kind: item,
+      });
+      if (!result.ok) {
+        const error =
+          result.message ||
+          (result.reason === "tts_not_configured"
+            ? "Voice is not configured yet."
+            : result.reason === "voice_restricted"
+              ? "This ElevenLabs voice needs a paid plan. Set ELEVENLABS_VOICE_ID to a Default voice from your account."
+              : "Could not generate audio.");
+        return { ok: false as const, error };
+      }
+      urls[item] = audioPlaybackPath(input.flashcardId, item);
+    }
+    return { ok: true as const, audio: urls };
+  } catch (error) {
+    return {
+      ok: false as const,
+      error: error instanceof Error ? error.message : "Could not generate audio.",
+    };
+  }
 }
 
 export async function reviewCardAction(input: { flashcardId: string; rating: ReviewRating }) {

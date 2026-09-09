@@ -10,4 +10,5 @@ Fill:
 - transcription: IPA
 - irregularForms: go/went/gone for irregular verbs, otherwise null
 - examples: exactly three example sentences
-- definition: a clear concise meaning in simple words`;
+- definition: a clear concise meaning in simple words. Do not repeat the part of speech in the definition.
+`;

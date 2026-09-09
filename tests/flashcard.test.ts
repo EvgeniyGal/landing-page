@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 import { generatedCardSchema } from "../lib/flashcard/schema";
-import { formatFlashcardText } from "../lib/flashcard/format";
-import { isTtsConfigured } from "../lib/elevenlabs/tts";
+import { formatBackDefinition, formatFlashcardText } from "../lib/flashcard/format";
+import { isRestrictedVoiceError, isTtsConfigured } from "../lib/elevenlabs/tts";
+import { isPrivateStoreError } from "../lib/storage/blob";
 import { newCardSchedule, previewIntervals, scheduleReview } from "../lib/srs/sm2";
 import { parseTtsCallback, ttsCallbackData } from "../lib/telegram/parse";
 
@@ -30,6 +31,17 @@ test("formatFlashcardText includes front examples and back definition", () => {
   assert.match(text, /1\. The government/);
   assert.match(text, /Back side:/);
   assert.match(text, /to put an end to something/);
+});
+
+test("formatBackDefinition does not repeat the part of speech", () => {
+  assert.equal(
+    formatBackDefinition("(adjective) pleasant or not too hot", "adjective"),
+    "(adjective) pleasant or not too hot",
+  );
+  assert.equal(
+    formatBackDefinition("(adjective) (adjective) pleasant or not too hot", "adjective"),
+    "(adjective) pleasant or not too hot",
+  );
 });
 
 test("SM-2 Good on a new card enters the first learning step", () => {
@@ -80,5 +92,27 @@ test("isTtsConfigured is false without env keys", () => {
   assert.equal(isTtsConfigured(), false);
   if (key) process.env.ELEVENLABS_API_KEY = key;
   if (voice) process.env.ELEVENLABS_VOICE_ID = voice;
+});
+
+test("isPrivateStoreError detects Vercel private Blob stores", () => {
+  assert.equal(
+    isPrivateStoreError(new Error("Vercel Blob: Cannot use public access on a private store.")),
+    true,
+  );
+  assert.equal(isPrivateStoreError(new Error("network timeout")), false);
+});
+
+test("isRestrictedVoiceError detects paid-only ElevenLabs voices", () => {
+  assert.equal(
+    isRestrictedVoiceError('{"detail":{"code":"bad_request","status":"free_users_not_allowed"}}'),
+    true,
+  );
+  assert.equal(
+    isRestrictedVoiceError(
+      '{"detail":{"type":"payment_required","code":"paid_plan_required","message":"Free users cannot use library voices via the API."}}',
+    ),
+    true,
+  );
+  assert.equal(isRestrictedVoiceError("quota exceeded"), false);
 });
 

@@ -2,8 +2,12 @@ import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { flashcardAudio, flashcards, type AudioKind } from "@/lib/db/schema";
 import { cardPayload } from "@/lib/flashcard/create";
-import { isTtsConfigured, synthesizeSpeech } from "@/lib/elevenlabs/tts";
+import { isTtsConfigured, synthesizeSpeech, TtsError } from "@/lib/elevenlabs/tts";
 import { putAudioBlob } from "@/lib/storage/blob";
+
+export function audioPlaybackPath(flashcardId: string, kind: AudioKind) {
+  return `/api/audio/${flashcardId}/${kind}`;
+}
 
 export const AUDIO_KINDS: AudioKind[] = ["word", "example_1", "example_2", "example_3"];
 
@@ -29,7 +33,10 @@ export async function getOrCreateAudio(input: {
   userId: string;
   flashcardId: string;
   kind: AudioKind;
-}) {
+}): Promise<
+  | { ok: true; url: string; kind: AudioKind; created: boolean }
+  | { ok: false; reason: "tts_not_configured" | "not_found" | "no_text" | "tts_failed" | "voice_restricted"; message?: string }
+> {
   if (!isTtsConfigured()) {
     return { ok: false as const, reason: "tts_not_configured" as const };
   }
@@ -55,15 +62,39 @@ export async function getOrCreateAudio(input: {
     return { ok: false as const, reason: "no_text" as const };
   }
 
-  const bytes = await synthesizeSpeech(text);
-  const blobUrl = await putAudioBlob({
-    userId: input.userId,
-    cardId: card.id,
-    kind: input.kind,
-    bytes,
-  });
+  let bytes: Buffer;
+  try {
+    bytes = await synthesizeSpeech(text);
+  } catch (error) {
+    if (error instanceof TtsError) {
+      return { ok: false as const, reason: error.reason, message: error.message };
+    }
+    return {
+      ok: false as const,
+      reason: "tts_failed" as const,
+      message: error instanceof Error ? error.message : "Could not generate audio.",
+    };
+  }
 
-  await db
+  let blobUrl: string;
+  try {
+    blobUrl = await putAudioBlob({
+      userId: input.userId,
+      cardId: card.id,
+      kind: input.kind,
+      bytes,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : "Could not store audio.";
+    console.error("putAudioBlob failed", message);
+    return {
+      ok: false as const,
+      reason: "tts_failed" as const,
+      message: `Could not store audio. Check BLOB_READ_WRITE_TOKEN. ${message}`,
+    };
+  }
+
+  const [stored] = await db
     .insert(flashcardAudio)
     .values({
       flashcardId: card.id,
@@ -71,13 +102,21 @@ export async function getOrCreateAudio(input: {
       blobUrl,
       contentType: "audio/mpeg",
     })
-    .onConflictDoNothing();
+    .onConflictDoUpdate({
+      target: [flashcardAudio.flashcardId, flashcardAudio.kind],
+      set: { blobUrl, contentType: "audio/mpeg" },
+    })
+    .returning();
 
-  const stored = await db.query.flashcardAudio.findFirst({
-    where: and(eq(flashcardAudio.flashcardId, card.id), eq(flashcardAudio.kind, input.kind)),
-  });
+  if (!stored) {
+    return {
+      ok: false as const,
+      reason: "tts_failed" as const,
+      message: "Audio was uploaded but could not be saved.",
+    };
+  }
 
-  return { ok: true as const, url: stored?.blobUrl ?? blobUrl, kind: input.kind, created: true };
+  return { ok: true as const, url: stored.blobUrl, kind: input.kind, created: true };
 }
 
 export async function getOrCreateAudioBatch(input: {

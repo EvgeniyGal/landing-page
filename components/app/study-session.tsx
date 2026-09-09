@@ -94,30 +94,36 @@ export function StudySession({
                 </p>
                 <p className="mt-2 text-white/70">{card.transcription}</p>
               </div>
-              <SpeakerButton flashcardId={card.id} kind="word" url={card.audio.word} />
+              {card.audio.word ? (
+                <SpeakerButton flashcardId={card.id} kind="word" url={card.audio.word} generateOnPlay={false} />
+              ) : null}
             </div>
 
             {revealed ? (
               <div className="mt-8 space-y-5">
                 <ol className="space-y-3 text-base leading-7 text-white/90">
-                  {card.examples.map((example, exampleIndex) => (
-                    <li key={example} className="flex items-start justify-between gap-3">
-                      <span>
-                        {exampleIndex + 1}. {example}
-                      </span>
-                      <SpeakerButton
-                        flashcardId={card.id}
-                        kind={`example_${exampleIndex + 1}` as "example_1"}
-                        url={card.audio[`example_${exampleIndex + 1}`]}
-                      />
-                    </li>
-                  ))}
+                  {card.examples.map((example, exampleIndex) => {
+                    const kind = `example_${exampleIndex + 1}` as "example_1" | "example_2" | "example_3";
+                    const url = card.audio[kind];
+                    return (
+                      <li key={example} className="flex items-start justify-between gap-3">
+                        <span>
+                          {exampleIndex + 1}. {example}
+                        </span>
+                        {url ? (
+                          <SpeakerButton
+                            flashcardId={card.id}
+                            kind={kind}
+                            url={url}
+                            generateOnPlay={false}
+                          />
+                        ) : null}
+                      </li>
+                    );
+                  })}
                 </ol>
                 <hr className="border-white/15" />
-                <p className="text-white/90">
-                  {card.partOfSpeech ? `(${card.partOfSpeech}) ` : ""}
-                  {card.definition}
-                </p>
+                <p className="text-white/90">{card.definition}</p>
               </div>
             ) : null}
           </div>
