@@ -16,12 +16,20 @@ export const proxy = auth((req) => {
       return NextResponse.redirect(login);
     }
     if (role !== "admin") {
-      return NextResponse.redirect(new URL("/account", req.nextUrl.origin));
+      return NextResponse.redirect(new URL("/app", req.nextUrl.origin));
+    }
+  }
+
+  if (pathname.startsWith("/app") || pathname === "/account") {
+    if (!isLoggedIn) {
+      const login = new URL("/login", req.nextUrl.origin);
+      login.searchParams.set("callbackUrl", pathname);
+      return NextResponse.redirect(login);
     }
   }
 
   if (pathname === "/login" && isLoggedIn) {
-    const dest = role === "admin" ? "/admin" : "/account";
+    const dest = role === "admin" ? "/admin" : "/app";
     return NextResponse.redirect(new URL(dest, req.nextUrl.origin));
   }
 
@@ -31,5 +39,5 @@ export const proxy = auth((req) => {
 export default proxy;
 
 export const config = {
-  matcher: ["/admin/:path*", "/login"],
+  matcher: ["/admin/:path*", "/login", "/app/:path*", "/account"],
 };

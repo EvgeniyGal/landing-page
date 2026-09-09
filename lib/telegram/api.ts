@@ -31,7 +31,7 @@ export async function validateAndRegisterBot(token: string) {
   await telegramApi(token, "setWebhook", {
     url: getTelegramWebhookUrl(),
     secret_token: secret,
-    allowed_updates: ["message"],
+    allowed_updates: ["message", "callback_query"],
   });
 
   return {
@@ -40,9 +40,34 @@ export async function validateAndRegisterBot(token: string) {
   };
 }
 
-export async function sendTelegramMessage(token: string, chatId: number, text: string) {
+export type InlineKeyboard = {
+  inline_keyboard: { text: string; callback_data: string }[][];
+};
+
+export async function sendTelegramMessage(
+  token: string,
+  chatId: number,
+  text: string,
+  replyMarkup?: InlineKeyboard,
+) {
   await telegramApi(token, "sendMessage", {
     chat_id: chatId,
+    text,
+    reply_markup: replyMarkup,
+  });
+}
+
+export async function sendTelegramAudio(token: string, chatId: number, audioUrl: string, title?: string) {
+  await telegramApi(token, "sendAudio", {
+    chat_id: chatId,
+    audio: audioUrl,
+    title,
+  });
+}
+
+export async function answerCallbackQuery(token: string, callbackQueryId: string, text?: string) {
+  await telegramApi(token, "answerCallbackQuery", {
+    callback_query_id: callbackQueryId,
     text,
   });
 }

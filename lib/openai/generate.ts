@@ -1,5 +1,11 @@
 import OpenAI from "openai";
 import { buildGenerationPrompt } from "@/lib/flashcard/prompt";
+import {
+  generatedCardSchema,
+  JSON_SYSTEM_PROMPT,
+  OPENAI_CARD_JSON_SCHEMA,
+  type GeneratedCard,
+} from "@/lib/flashcard/schema";
 
 const EXCLUDED_MODEL_FRAGMENTS = [
   "audio",
@@ -40,21 +46,57 @@ export async function listChatModels(apiKey: string): Promise<string[]> {
     .sort((a, b) => a.localeCompare(b));
 }
 
+function extractJson(text: string) {
+  const fenced = text.match(/```(?:json)?\s*([\s\S]*?)```/i);
+  const raw = fenced?.[1]?.trim() || text.trim();
+  const start = raw.indexOf("{");
+  const end = raw.lastIndexOf("}");
+  if (start === -1 || end === -1) {
+    throw new Error("OpenAI returned empty content");
+  }
+  return JSON.parse(raw.slice(start, end + 1)) as unknown;
+}
+
 export async function generateFlashcardContent(input: {
   apiKey: string;
   model: string;
   prompt: string;
   word: string;
-}): Promise<string> {
+}): Promise<GeneratedCard> {
   const client = new OpenAI({ apiKey: input.apiKey });
-  const completion = await client.chat.completions.create({
-    model: input.model,
-    messages: [{ role: "user", content: buildGenerationPrompt(input.prompt, input.word) }],
-    temperature: 0.4,
-  });
-  const text = completion.choices[0]?.message?.content?.trim();
-  if (!text) {
-    throw new Error("OpenAI returned empty content");
+  const userContent = buildGenerationPrompt(input.prompt, input.word);
+
+  try {
+    const completion = await client.chat.completions.create({
+      model: input.model,
+      messages: [
+        { role: "system", content: JSON_SYSTEM_PROMPT },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.4,
+      response_format: {
+        type: "json_schema",
+        json_schema: OPENAI_CARD_JSON_SCHEMA,
+      },
+    });
+    const text = completion.choices[0]?.message?.content?.trim();
+    if (!text) {
+      throw new Error("OpenAI returned empty content");
+    }
+    return generatedCardSchema.parse(JSON.parse(text));
+  } catch (error) {
+    const completion = await client.chat.completions.create({
+      model: input.model,
+      messages: [
+        { role: "system", content: `${JSON_SYSTEM_PROMPT}\nRespond with a JSON object only.` },
+        { role: "user", content: userContent },
+      ],
+      temperature: 0.4,
+    });
+    const text = completion.choices[0]?.message?.content?.trim();
+    if (!text) {
+      throw error instanceof Error ? error : new Error("OpenAI returned empty content");
+    }
+    return generatedCardSchema.parse(extractJson(text));
   }
-  return text;
 }

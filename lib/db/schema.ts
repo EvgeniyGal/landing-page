@@ -1,7 +1,12 @@
+import { relations } from "drizzle-orm";
 import {
+  boolean,
+  index,
   integer,
+  jsonb,
   pgEnum,
   pgTable,
+  real,
   text,
   timestamp,
   uniqueIndex,
@@ -11,6 +16,9 @@ import {
 
 export const userRoleEnum = pgEnum("user_role", ["admin", "user"]);
 export const userStatusEnum = pgEnum("user_status", ["invited", "active", "disabled"]);
+export const cardStateEnum = pgEnum("card_state", ["new", "learning", "review", "relearning"]);
+export const audioKindEnum = pgEnum("audio_kind", ["word", "example_1", "example_2", "example_3"]);
+export const reviewRatingEnum = pgEnum("review_rating", ["again", "hard", "good", "easy"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -70,6 +78,19 @@ export const telegramConnections = pgTable("telegram_connections", {
   uniqueIndex("telegram_connections_telegram_user_unique").on(table.telegramUserId),
 ]);
 
+export const oauthAccounts = pgTable("oauth_accounts", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  provider: varchar("provider", { length: 32 }).notNull(),
+  providerAccountId: varchar("provider_account_id", { length: 255 }).notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("oauth_accounts_provider_account_unique").on(table.provider, table.providerAccountId),
+  index("oauth_accounts_user_idx").on(table.userId),
+]);
+
 export const APP_SETTINGS_ID = 1;
 
 export const appSettings = pgTable("app_settings", {
@@ -84,21 +105,106 @@ export const appSettings = pgTable("app_settings", {
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+export const decks = pgTable("decks", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  isDefault: boolean("is_default").notNull().default(false),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("decks_user_idx").on(table.userId)]);
+
 export const flashcards = pgTable("flashcards", {
   id: uuid("id").defaultRandom().primaryKey(),
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  deckId: uuid("deck_id")
+    .notNull()
+    .references(() => decks.id, { onDelete: "cascade" }),
   inputText: text("input_text").notNull(),
   outputText: text("output_text").notNull(),
+  word: text("word"),
+  partOfSpeech: varchar("part_of_speech", { length: 64 }),
+  transcription: text("transcription"),
+  irregularForms: text("irregular_forms"),
+  examples: jsonb("examples").$type<string[]>(),
+  definition: text("definition"),
+  state: cardStateEnum("state").notNull().default("new"),
+  stepIndex: integer("step_index").notNull().default(0),
+  ease: real("ease").notNull().default(2.5),
+  intervalDays: real("interval_days").notNull().default(0),
+  dueAt: timestamp("due_at", { withTimezone: true }).defaultNow().notNull(),
+  lapses: integer("lapses").notNull().default(0),
+  reps: integer("reps").notNull().default(0),
   model: varchar("model", { length: 128 }).notNull(),
   promptSnapshot: text("prompt_snapshot").notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+}, (table) => [
+  index("flashcards_deck_due_idx").on(table.deckId, table.dueAt),
+  index("flashcards_user_idx").on(table.userId),
+]);
+
+export const flashcardAudio = pgTable("flashcard_audio", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  flashcardId: uuid("flashcard_id")
+    .notNull()
+    .references(() => flashcards.id, { onDelete: "cascade" }),
+  kind: audioKindEnum("kind").notNull(),
+  blobUrl: text("blob_url").notNull(),
+  contentType: varchar("content_type", { length: 64 }).notNull().default("audio/mpeg"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [uniqueIndex("flashcard_audio_card_kind_unique").on(table.flashcardId, table.kind)]);
+
+export const reviewLogs = pgTable("review_logs", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  flashcardId: uuid("flashcard_id")
+    .notNull()
+    .references(() => flashcards.id, { onDelete: "cascade" }),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  rating: reviewRatingEnum("rating").notNull(),
+  previousIntervalDays: real("previous_interval_days").notNull(),
+  nextIntervalDays: real("next_interval_days").notNull(),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [index("review_logs_card_idx").on(table.flashcardId)]);
+
+export const usersRelations = relations(users, ({ many }) => ({
+  decks: many(decks),
+  flashcards: many(flashcards),
+  oauthAccounts: many(oauthAccounts),
+}));
+
+export const decksRelations = relations(decks, ({ one, many }) => ({
+  user: one(users, { fields: [decks.userId], references: [users.id] }),
+  flashcards: many(flashcards),
+}));
+
+export const flashcardsRelations = relations(flashcards, ({ one, many }) => ({
+  user: one(users, { fields: [flashcards.userId], references: [users.id] }),
+  deck: one(decks, { fields: [flashcards.deckId], references: [decks.id] }),
+  audio: many(flashcardAudio),
+  reviews: many(reviewLogs),
+}));
+
+export const flashcardAudioRelations = relations(flashcardAudio, ({ one }) => ({
+  flashcard: one(flashcards, { fields: [flashcardAudio.flashcardId], references: [flashcards.id] }),
+}));
+
+export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
+  user: one(users, { fields: [oauthAccounts.userId], references: [users.id] }),
+}));
 
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type AppSettings = typeof appSettings.$inferSelect;
 export type Flashcard = typeof flashcards.$inferSelect;
+export type Deck = typeof decks.$inferSelect;
+export type FlashcardAudio = typeof flashcardAudio.$inferSelect;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
+export type CardState = (typeof cardStateEnum.enumValues)[number];
+export type AudioKind = (typeof audioKindEnum.enumValues)[number];
+export type ReviewRating = (typeof reviewRatingEnum.enumValues)[number];

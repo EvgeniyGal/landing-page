@@ -11,7 +11,7 @@ export async function loginAction(_prev: { error?: string } | null, formData: Fo
     await signIn("credentials", {
       email,
       password,
-      redirectTo: "/admin",
+      redirectTo: "/app",
     });
   } catch (error) {
     if (error instanceof AuthError) {
@@ -25,4 +25,8 @@ export async function loginAction(_prev: { error?: string } | null, formData: Fo
 
 export async function logoutAction() {
   await signOut({ redirectTo: "/login" });
+}
+
+export async function googleLoginAction() {
+  await signIn("google", { redirectTo: "/app" });
 }
