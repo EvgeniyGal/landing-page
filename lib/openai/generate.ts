@@ -57,6 +57,29 @@ function extractJson(text: string) {
   return JSON.parse(raw.slice(start, end + 1)) as unknown;
 }
 
+export function buildPlainTextMessages(prompt: string, word: string) {
+  return [{ role: "user" as const, content: buildGenerationPrompt(prompt, word) }];
+}
+
+export async function generatePlainTextReply(input: {
+  apiKey: string;
+  model: string;
+  prompt: string;
+  word: string;
+}): Promise<string> {
+  const client = new OpenAI({ apiKey: input.apiKey });
+  const completion = await client.chat.completions.create({
+    model: input.model,
+    messages: buildPlainTextMessages(input.prompt, input.word),
+    temperature: 0.4,
+  });
+  const text = completion.choices[0]?.message?.content?.trim();
+  if (!text) {
+    throw new Error("OpenAI returned empty content");
+  }
+  return text;
+}
+
 export async function generateFlashcardContent(input: {
   apiKey: string;
   model: string;

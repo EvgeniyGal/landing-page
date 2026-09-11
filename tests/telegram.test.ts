@@ -27,7 +27,7 @@ test("splitTelegramMessage splits long text on newlines when possible", () => {
   assert.equal(chunks.join(""), `${first}${second}`);
 });
 
-test("parseTtsCallback reads a voice callback", () => {
+test("parseTtsCallback still reads legacy voice buttons", () => {
   const id = "11111111-1111-1111-1111-111111111111";
   assert.deepEqual(parseTtsCallback(ttsCallbackData(id, "word")), {
     flashcardId: id,

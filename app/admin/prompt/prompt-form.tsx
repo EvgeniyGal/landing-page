@@ -13,9 +13,10 @@ export function PromptForm({ prompt }: { prompt: string }) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Flashcard prompt</CardTitle>
+        <CardTitle>Telegram prompt</CardTitle>
         <CardDescription>
-          Sent to OpenAI with each word. Use {"{{word}}"} to place the user text, or it will be appended automatically.
+          Instructions for the Telegram reply. OpenAI returns plain text from this prompt (no JSON). Use {"{{word}}"} to
+          place the user text, or it will be appended automatically.
         </CardDescription>
       </CardHeader>
       <CardContent>
