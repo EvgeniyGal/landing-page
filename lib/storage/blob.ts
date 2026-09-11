@@ -41,7 +41,7 @@ export async function putAudioBlob(input: {
 
   for (const access of accessOrder()) {
     try {
-      const result = await put(pathname, new Uint8Array(input.bytes), {
+      const result = await put(pathname, input.bytes, {
         access,
         addRandomSuffix: false,
         allowOverwrite: true,

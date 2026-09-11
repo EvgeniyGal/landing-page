@@ -8,13 +8,14 @@ export class TtsError extends Error {
 }
 
 const FREE_MODELS = ["eleven_multilingual_v2", "eleven_flash_v2_5", "eleven_turbo_v2_5"];
+const DEFAULT_PREMADE_VOICE_ID = "21m00Tcm4TlvDq8ikWAM";
 const PREMADE_VOICE_IDS = [
-  "21m00Tcm4TlvDq8ikWAM",
+  DEFAULT_PREMADE_VOICE_ID,
   "EXAVITQu4vr4xnSDxMaL",
   "pNInz6obpgDQGcFmaJgB",
 ];
 
-let cachedPremadeVoiceId: string | null | undefined;
+let cachedPremadeVoiceId: string | undefined;
 
 export function isTtsConfigured() {
   return Boolean(process.env.ELEVENLABS_API_KEY);
@@ -55,8 +56,8 @@ async function requestSpeech(apiKey: string, voiceId: string, text: string, mode
   });
 }
 
-async function firstPremadeVoiceId(apiKey: string) {
-  if (cachedPremadeVoiceId !== undefined) {
+async function firstPremadeVoiceId(apiKey: string): Promise<string> {
+  if (cachedPremadeVoiceId) {
     return cachedPremadeVoiceId;
   }
 
@@ -64,7 +65,7 @@ async function firstPremadeVoiceId(apiKey: string) {
     headers: { "xi-api-key": apiKey },
   });
   if (!response.ok) {
-    cachedPremadeVoiceId = PREMADE_VOICE_IDS[0];
+    cachedPremadeVoiceId = DEFAULT_PREMADE_VOICE_ID;
     return cachedPremadeVoiceId;
   }
 
@@ -72,7 +73,7 @@ async function firstPremadeVoiceId(apiKey: string) {
     voices?: { voice_id?: string; category?: string }[];
   };
   const premade = (data.voices ?? []).find((voice) => voice.category === "premade" && voice.voice_id);
-  cachedPremadeVoiceId = premade?.voice_id ?? PREMADE_VOICE_IDS[0];
+  cachedPremadeVoiceId = premade?.voice_id ?? DEFAULT_PREMADE_VOICE_ID;
   return cachedPremadeVoiceId;
 }
 
