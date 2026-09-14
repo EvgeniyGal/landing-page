@@ -3,6 +3,7 @@ import { Archivo, IBM_Plex_Mono, IBM_Plex_Sans } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
 import { getHomeJsonLd, getSiteUrl, SITE_DESCRIPTION, SITE_NAME, SITE_TAGLINE } from "@/lib/seo";
+import { THEME_BOOTSTRAP_SCRIPT } from "@/lib/theme";
 
 const archivo = Archivo({
   variable: "--font-archivo",
@@ -28,7 +29,7 @@ const ibmPlexMono = IBM_Plex_Mono({
   preload: false,
 });
 
-const themeBootstrapScript = `(function(){try{var mode=localStorage.getItem("theme-mode");var dark=mode==="dark"||(mode==="system"&&window.matchMedia("(prefers-color-scheme: dark)").matches);document.documentElement.classList.toggle("dark",dark);}catch(e){}})();`;
+const themeBootstrapScript = THEME_BOOTSTRAP_SCRIPT;
 
 export const viewport: Viewport = {
   themeColor: [

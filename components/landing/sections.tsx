@@ -6,13 +6,12 @@ import { media, type ProjectImageId } from "@/app/data/media";
 import { getOfferAgreement } from "@/app/data/offer-agreement";
 import { Locale, translateContent } from "@/app/data/site-content";
 import { LogoYg } from "@/components/landing/logo-yg";
+import type { ThemeMode } from "@/lib/theme";
 
 type ContactActionProps = {
   onOpenContact: () => void;
   locale: Locale;
 };
-
-type ThemeMode = "light" | "dark" | "system";
 
 type TopNavProps = ContactActionProps & {
   theme: ThemeMode;

@@ -16,6 +16,7 @@ import {
   TopNav,
 } from "@/components/landing/sections";
 import { homeDocumentMeta } from "@/lib/seo";
+import { isDarkTheme, type ThemeMode } from "@/lib/theme";
 
 const ContactForm = dynamic(
   () => import("@/components/landing/contact-form").then((mod) => mod.ContactForm),
@@ -27,12 +28,10 @@ const OfferAgreementModal = dynamic(
   { ssr: false },
 );
 
-type ThemeMode = "light" | "dark" | "system";
-
 export function LandingPage() {
   const [isContactOpen, setIsContactOpen] = useState(false);
   const [isOfferOpen, setIsOfferOpen] = useState(false);
-  const [theme, setTheme] = useState<ThemeMode>("light");
+  const [theme, setTheme] = useState<ThemeMode>("system");
   const [locale, setLocale] = useState<Locale>("en");
   const [prefsReady, setPrefsReady] = useState(false);
 
@@ -57,18 +56,21 @@ export function LandingPage() {
     }
 
     const root = document.documentElement;
-    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const darkMedia = window.matchMedia("(prefers-color-scheme: dark)");
+    const lightMedia = window.matchMedia("(prefers-color-scheme: light)");
 
     const applyTheme = () => {
-      const resolvedDark = theme === "system" ? media.matches : theme === "dark";
-      root.classList.toggle("dark", resolvedDark);
+      root.classList.toggle("dark", isDarkTheme(theme));
     };
 
     applyTheme();
-    media.addEventListener("change", applyTheme);
-    window.localStorage.setItem("theme-mode", theme);
+    darkMedia.addEventListener("change", applyTheme);
+    lightMedia.addEventListener("change", applyTheme);
 
-    return () => media.removeEventListener("change", applyTheme);
+    return () => {
+      darkMedia.removeEventListener("change", applyTheme);
+      lightMedia.removeEventListener("change", applyTheme);
+    };
   }, [theme, prefsReady]);
 
   useEffect(() => {
@@ -88,7 +90,10 @@ export function LandingPage() {
       <TopNav
         locale={locale}
         theme={theme}
-        onThemeChange={setTheme}
+        onThemeChange={(next) => {
+          setTheme(next);
+          window.localStorage.setItem("theme-mode", next);
+        }}
         onLocaleChange={setLocale}
         onOpenContact={() => setIsContactOpen(true)}
       />
