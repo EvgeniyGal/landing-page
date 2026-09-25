@@ -237,6 +237,40 @@ export const openApiDocument = {
           },
         },
       },
+      post: {
+        tags: ["Decks"],
+        summary: "Create a dictionary (deck)",
+        security: [{ bearerAuth: [] }],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  name: { type: "string", minLength: 1, maxLength: 255 },
+                },
+                required: ["name"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Created deck",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    deck: { type: "object" },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
     },
     "/api/v1/decks/{id}": {
       get: {
@@ -261,6 +295,31 @@ export const openApiDocument = {
                       items: { $ref: "#/components/schemas/Flashcard" },
                     },
                   },
+                },
+              },
+            },
+          },
+          "404": {
+            description: "Not found",
+            content: { "application/json": { schema: { $ref: "#/components/schemas/Error" } } },
+          },
+        },
+      },
+      delete: {
+        tags: ["Decks"],
+        summary: "Delete a dictionary and all of its cards",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        responses: {
+          "200": {
+            description: "Deleted",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: { ok: { type: "boolean" } },
                 },
               },
             },
@@ -487,6 +546,10 @@ export const openApiDocument = {
                     type: "string",
                     enum: ["word", "example_1", "example_2", "example_3", "all_examples"],
                   },
+                  force: {
+                    type: "boolean",
+                    description: "When true, replaces any existing clip for the kind.",
+                  },
                 },
                 required: ["kind"],
               },
@@ -505,6 +568,47 @@ export const openApiDocument = {
                       type: "object",
                       additionalProperties: { type: "string" },
                     },
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+      delete: {
+        tags: ["Flashcards"],
+        summary: "Remove pronunciation audio for a card element",
+        security: [{ bearerAuth: [] }],
+        parameters: [
+          { name: "id", in: "path", required: true, schema: { type: "string", format: "uuid" } },
+        ],
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: {
+                type: "object",
+                properties: {
+                  kind: {
+                    type: "string",
+                    enum: ["word", "example_1", "example_2", "example_3", "all_examples"],
+                  },
+                },
+                required: ["kind"],
+              },
+            },
+          },
+        },
+        responses: {
+          "200": {
+            description: "Removed",
+            content: {
+              "application/json": {
+                schema: {
+                  type: "object",
+                  properties: {
+                    ok: { type: "boolean" },
+                    removed: { type: "array", items: { type: "string" } },
                   },
                 },
               },

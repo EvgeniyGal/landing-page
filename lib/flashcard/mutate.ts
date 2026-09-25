@@ -1,20 +1,23 @@
-import { and, eq } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { getDb } from "@/lib/db";
-import { flashcardAudio, flashcards, type Flashcard } from "@/lib/db/schema";
+import { flashcardAudio, flashcards, type AudioKind, type Flashcard } from "@/lib/db/schema";
 import { formatFlashcardText, stripDuplicatePosPrefix } from "@/lib/flashcard/format";
 import { generatedCardSchema, type GeneratedCard } from "@/lib/flashcard/schema";
 import { cardPayload } from "@/lib/flashcard/create";
 
 export type UpdateFlashcardInput = GeneratedCard;
 
-function spokenFieldsChanged(previous: GeneratedCard | null, next: GeneratedCard) {
-  if (!previous) {
-    return true;
+function audioKindsToClear(previous: GeneratedCard | null, next: GeneratedCard): AudioKind[] {
+  const kinds: AudioKind[] = [];
+  if (!previous || previous.word !== next.word) {
+    kinds.push("word");
   }
-  if (previous.word !== next.word) {
-    return true;
+  for (let index = 0; index < 3; index += 1) {
+    if (!previous || previous.examples[index] !== next.examples[index]) {
+      kinds.push(`example_${index + 1}` as AudioKind);
+    }
   }
-  return previous.examples.some((example, index) => example !== next.examples[index]);
+  return kinds;
 }
 
 export async function getFlashcardForUser(userId: string, flashcardId: string) {
@@ -48,7 +51,7 @@ export async function updateFlashcardForUser(input: {
     definition: stripDuplicatePosPrefix(parsed.data.definition, parsed.data.partOfSpeech),
   };
   const outputText = formatFlashcardText(card);
-  const clearAudio = spokenFieldsChanged(cardPayload(existing), card);
+  const clearKinds = audioKindsToClear(cardPayload(existing), card);
 
   const [row] = await db
     .update(flashcards)
@@ -69,8 +72,10 @@ export async function updateFlashcardForUser(input: {
     return { ok: false as const, reason: "not_found" as const };
   }
 
-  if (clearAudio) {
-    await db.delete(flashcardAudio).where(eq(flashcardAudio.flashcardId, row.id));
+  if (clearKinds.length) {
+    await db
+      .delete(flashcardAudio)
+      .where(and(eq(flashcardAudio.flashcardId, row.id), inArray(flashcardAudio.kind, clearKinds)));
   }
 
   return { ok: true as const, flashcard: row };

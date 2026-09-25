@@ -33,6 +33,7 @@ export async function getOrCreateAudio(input: {
   userId: string;
   flashcardId: string;
   kind: AudioKind;
+  force?: boolean;
 }): Promise<
   | { ok: true; url: string; kind: AudioKind; created: boolean }
   | { ok: false; reason: "tts_not_configured" | "not_found" | "no_text" | "tts_failed" | "voice_restricted"; message?: string }
@@ -49,11 +50,17 @@ export async function getOrCreateAudio(input: {
     return { ok: false as const, reason: "not_found" as const };
   }
 
-  const existing = await db.query.flashcardAudio.findFirst({
-    where: and(eq(flashcardAudio.flashcardId, card.id), eq(flashcardAudio.kind, input.kind)),
-  });
-  if (existing) {
-    return { ok: true as const, url: existing.blobUrl, kind: input.kind, created: false };
+  if (input.force) {
+    await db
+      .delete(flashcardAudio)
+      .where(and(eq(flashcardAudio.flashcardId, card.id), eq(flashcardAudio.kind, input.kind)));
+  } else {
+    const existing = await db.query.flashcardAudio.findFirst({
+      where: and(eq(flashcardAudio.flashcardId, card.id), eq(flashcardAudio.kind, input.kind)),
+    });
+    if (existing) {
+      return { ok: true as const, url: existing.blobUrl, kind: input.kind, created: false };
+    }
   }
 
   const payload = cardPayload(card);
@@ -119,10 +126,33 @@ export async function getOrCreateAudio(input: {
   return { ok: true as const, url: stored.blobUrl, kind: input.kind, created: true };
 }
 
+export async function deleteFlashcardAudio(input: {
+  userId: string;
+  flashcardId: string;
+  kinds: AudioKind[];
+}): Promise<{ ok: true } | { ok: false; reason: "not_found" }> {
+  const db = getDb();
+  const card = await db.query.flashcards.findFirst({
+    where: and(eq(flashcards.id, input.flashcardId), eq(flashcards.userId, input.userId)),
+    columns: { id: true },
+  });
+  if (!card) {
+    return { ok: false as const, reason: "not_found" as const };
+  }
+
+  for (const kind of input.kinds) {
+    await db
+      .delete(flashcardAudio)
+      .where(and(eq(flashcardAudio.flashcardId, card.id), eq(flashcardAudio.kind, kind)));
+  }
+  return { ok: true as const };
+}
+
 export async function getOrCreateAudioBatch(input: {
   userId: string;
   flashcardId: string;
   kinds: AudioKind[];
+  force?: boolean;
 }) {
   const items = [];
   for (const kind of input.kinds) {

@@ -2,8 +2,9 @@
 
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { AUDIO_KINDS, audioPlaybackPath, getOrCreateAudio, parseAudioKind } from "@/lib/flashcard/audio";
+import { AUDIO_KINDS, audioPlaybackPath, deleteFlashcardAudio, getOrCreateAudio, parseAudioKind } from "@/lib/flashcard/audio";
 import { createFlashcardForUser } from "@/lib/flashcard/create";
+import { createDeckForUser, deleteDeckForUser } from "@/lib/flashcard/decks";
 import { deleteFlashcardForUser, updateFlashcardForUser } from "@/lib/flashcard/mutate";
 import { serializeFlashcard } from "@/lib/api/serialize";
 import { reviewCard } from "@/lib/srs/review";
@@ -40,7 +41,12 @@ export async function createCardAction(input: { deckId: string; word: string }) 
   }
 }
 
-export async function requestAudioAction(input: { flashcardId: string; kind?: string; kinds?: string[] }) {
+export async function requestAudioAction(input: {
+  flashcardId: string;
+  kind?: string;
+  kinds?: string[];
+  force?: boolean;
+}) {
   const user = await requireLearner();
   const requested = input.kinds?.length ? input.kinds : input.kind ? [input.kind] : [];
   const kinds: (typeof AUDIO_KINDS)[number][] = [];
@@ -66,6 +72,7 @@ export async function requestAudioAction(input: { flashcardId: string; kind?: st
         userId: user.id,
         flashcardId: input.flashcardId,
         kind: item,
+        force: input.force,
       });
       if (!result.ok) {
         const error =
@@ -86,6 +93,43 @@ export async function requestAudioAction(input: { flashcardId: string; kind?: st
       error: error instanceof Error ? error.message : "Could not generate audio.",
     };
   }
+}
+
+export async function deleteAudioAction(input: {
+  flashcardId: string;
+  deckId: string;
+  kind?: string;
+  kinds?: string[];
+}) {
+  const user = await requireLearner();
+  const requested = input.kinds?.length ? input.kinds : input.kind ? [input.kind] : [];
+  const kinds: (typeof AUDIO_KINDS)[number][] = [];
+  for (const value of requested) {
+    const parsed = parseAudioKind(value);
+    if (!parsed || parsed === "all_examples") {
+      if (parsed === "all_examples") {
+        kinds.push(...AUDIO_KINDS.filter((item) => item !== "word"));
+        continue;
+      }
+      return { ok: false as const, error: "Invalid audio kind." };
+    }
+    kinds.push(parsed);
+  }
+  const uniqueKinds = [...new Set(kinds)];
+  if (!uniqueKinds.length) {
+    return { ok: false as const, error: "Select at least one clip." };
+  }
+  const result = await deleteFlashcardAudio({
+    userId: user.id,
+    flashcardId: input.flashcardId,
+    kinds: uniqueKinds,
+  });
+  if (!result.ok) {
+    return { ok: false as const, error: "Card not found." };
+  }
+  revalidatePath(`/app/decks/${input.deckId}`);
+  revalidatePath(`/app/decks/${input.deckId}/cards/${input.flashcardId}/edit`);
+  return { ok: true as const, removed: uniqueKinds };
 }
 
 export async function reviewCardAction(input: { flashcardId: string; rating: ReviewRating }) {
@@ -119,6 +163,7 @@ export async function updateCardAction(input: {
     };
   }
   revalidatePath(`/app/decks/${input.deckId}`);
+  revalidatePath(`/app/decks/${input.deckId}/cards/${input.flashcardId}/edit`);
   return { ok: true as const, card: serializeFlashcard(result.flashcard) };
 }
 
@@ -131,6 +176,41 @@ export async function deleteCardAction(input: { flashcardId: string; deckId: str
   if (!result.ok) {
     return { ok: false as const, error: "Card not found." };
   }
+  revalidatePath(`/app/decks/${input.deckId}`);
+  revalidatePath("/app");
+  return { ok: true as const };
+}
+
+export async function createDeckAction(input: { name: string }) {
+  const user = await requireLearner();
+  const result = await createDeckForUser({
+    userId: user.id,
+    name: input.name,
+  });
+  if (!result.ok) {
+    return { ok: false as const, error: "Enter a dictionary name." };
+  }
+  revalidatePath("/app");
+  return {
+    ok: true as const,
+    deck: {
+      id: result.deck.id,
+      name: result.deck.name,
+      isDefault: result.deck.isDefault,
+    },
+  };
+}
+
+export async function deleteDeckAction(input: { deckId: string }) {
+  const user = await requireLearner();
+  const result = await deleteDeckForUser({
+    userId: user.id,
+    deckId: input.deckId,
+  });
+  if (!result.ok) {
+    return { ok: false as const, error: "Dictionary not found." };
+  }
+  revalidatePath("/app");
   revalidatePath(`/app/decks/${input.deckId}`);
   return { ok: true as const };
 }
