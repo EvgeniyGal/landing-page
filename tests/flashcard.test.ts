@@ -24,6 +24,15 @@ test("generatedCardSchema accepts a complete card", () => {
   assert.equal(generatedCardSchema.parse(sample).word, "abolish");
 });
 
+test("generatedCardSchema rejects incomplete examples", () => {
+  assert.throws(() =>
+    generatedCardSchema.parse({
+      ...sample,
+      examples: ["only one"],
+    }),
+  );
+});
+
 test("formatFlashcardText includes front examples and back definition", () => {
   const text = formatFlashcardText(sample);
   assert.match(text, /Front side:/);

@@ -4,9 +4,12 @@ import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AUDIO_KINDS, audioPlaybackPath, getOrCreateAudio, parseAudioKind } from "@/lib/flashcard/audio";
 import { createFlashcardForUser } from "@/lib/flashcard/create";
+import { deleteFlashcardForUser, updateFlashcardForUser } from "@/lib/flashcard/mutate";
 import { serializeFlashcard } from "@/lib/api/serialize";
 import { reviewCard } from "@/lib/srs/review";
 import type { ReviewRating } from "@/lib/db/schema";
+import type { GeneratedCard } from "@/lib/flashcard/schema";
+import { revalidatePath } from "next/cache";
 
 async function requireLearner() {
   const session = await auth();
@@ -95,5 +98,39 @@ export async function reviewCardAction(input: { flashcardId: string; rating: Rev
   if (!result.ok) {
     return { ok: false as const, error: "Card not found." };
   }
+  return { ok: true as const };
+}
+
+export async function updateCardAction(input: {
+  flashcardId: string;
+  deckId: string;
+  data: GeneratedCard;
+}) {
+  const user = await requireLearner();
+  const result = await updateFlashcardForUser({
+    userId: user.id,
+    flashcardId: input.flashcardId,
+    data: input.data,
+  });
+  if (!result.ok) {
+    return {
+      ok: false as const,
+      error: result.reason === "not_found" ? "Card not found." : "Check the card fields and try again.",
+    };
+  }
+  revalidatePath(`/app/decks/${input.deckId}`);
+  return { ok: true as const, card: serializeFlashcard(result.flashcard) };
+}
+
+export async function deleteCardAction(input: { flashcardId: string; deckId: string }) {
+  const user = await requireLearner();
+  const result = await deleteFlashcardForUser({
+    userId: user.id,
+    flashcardId: input.flashcardId,
+  });
+  if (!result.ok) {
+    return { ok: false as const, error: "Card not found." };
+  }
+  revalidatePath(`/app/decks/${input.deckId}`);
   return { ok: true as const };
 }
