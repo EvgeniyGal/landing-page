@@ -10,13 +10,12 @@ export default async function AppHomePage() {
     redirect("/login");
   }
 
-  const defaultDeck = await getOrCreateDefaultDeck(session.user.id);
+  await getOrCreateDefaultDeck(session.user.id);
   const decks = await listDecksForUser(session.user.id);
 
   return (
     <div className="mx-auto max-w-5xl px-4 py-8">
       <DeckHome
-        defaultDeckId={defaultDeck.id}
         decks={decks.map((deck) => ({
           id: deck.id,
           name: deck.name,

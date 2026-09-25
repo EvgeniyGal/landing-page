@@ -16,13 +16,7 @@ export type HomeDeckItem = {
   cardCount: number;
 };
 
-export function DeckHome({
-  defaultDeckId,
-  decks: initialDecks,
-}: {
-  defaultDeckId: string;
-  decks: HomeDeckItem[];
-}) {
+export function DeckHome({ decks: initialDecks }: { decks: HomeDeckItem[] }) {
   const router = useRouter();
   const [decks, setDecks] = useState(initialDecks);
   const [name, setName] = useState("");
@@ -77,27 +71,18 @@ export function DeckHome({
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-4xl font-semibold tracking-tight">Home</h1>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => {
-              setAdding(true);
-              setError(null);
-            }}
-            className="border-white/15 bg-transparent text-white hover:bg-white/5"
-          >
-            <Plus className="size-4" />
-            Add dictionary
-          </Button>
-          <Link
-            href={`/app/decks/${defaultDeckId}/add`}
-            className="inline-flex items-center gap-2 rounded-xl bg-[#3d8bff] px-4 py-2.5 text-sm font-semibold text-white hover:bg-[#2f7af0]"
-          >
-            <Plus className="size-4" />
-            Add manually
-          </Link>
-        </div>
+        <Button
+          type="button"
+          variant="outline"
+          onClick={() => {
+            setAdding(true);
+            setError(null);
+          }}
+          className="border-white/15 bg-transparent text-white hover:bg-white/5"
+        >
+          <Plus className="size-4" />
+          Add dictionary
+        </Button>
       </div>
 
       {adding ? (
