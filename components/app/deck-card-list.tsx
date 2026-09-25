@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState, useTransition } from "react";
-import { Pencil, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 import { deleteCardAction } from "@/app/app/actions";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { SpeakerButton } from "@/components/app/speaker-button";
@@ -58,12 +58,17 @@ export function DeckCardList({ deckId, cards }: { deckId: string; cards: DeckCar
       <ul className="overflow-hidden rounded-2xl bg-[#1a1a1a]">
         {items.map((card, index) => (
           <li key={card.id} className={index > 0 ? "border-t border-white/8" : undefined}>
-            <div className="flex items-center gap-3 px-5 py-4">
-              <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">{card.irregularForms || card.word}</p>
-                <p className="truncate text-sm text-white/45">{card.definition}</p>
-              </div>
-              <span className={`rounded-full px-2.5 py-1 text-xs ${card.stateClassName}`}>{card.stateLabel}</span>
+            <div className="flex items-center gap-2 px-3 py-2 sm:px-5 sm:py-3">
+              <Link
+                href={`/app/decks/${deckId}/cards/${card.id}/edit`}
+                className="flex min-w-0 flex-1 items-center gap-3 rounded-xl px-2 py-3 hover:bg-white/4"
+              >
+                <div className="min-w-0 flex-1">
+                  <p className="truncate font-medium">{card.irregularForms || card.word}</p>
+                  <p className="truncate text-sm text-white/45">{card.definition}</p>
+                </div>
+                <span className={`rounded-full px-2.5 py-1 text-xs ${card.stateClassName}`}>{card.stateLabel}</span>
+              </Link>
               {card.audioWordUrl ? (
                 <SpeakerButton
                   flashcardId={card.id}
@@ -72,33 +77,20 @@ export function DeckCardList({ deckId, cards }: { deckId: string; cards: DeckCar
                   generateOnPlay={false}
                 />
               ) : null}
-              <div className="flex shrink-0 items-center gap-1">
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  asChild
-                  className="size-8 text-white/55 hover:bg-white/10 hover:text-white"
-                >
-                  <Link href={`/app/decks/${deckId}/cards/${card.id}/edit`} aria-label={`Edit ${card.word}`}>
-                    <Pencil className="size-4" />
-                  </Link>
-                </Button>
-                <Button
-                  type="button"
-                  size="icon"
-                  variant="ghost"
-                  disabled={pending}
-                  aria-label={`Delete ${card.word}`}
-                  onClick={() => {
-                    setError(null);
-                    setPendingDelete(card);
-                  }}
-                  className="size-8 text-white/55 hover:bg-red-500/15 hover:text-red-200"
-                >
-                  <Trash2 className="size-4" />
-                </Button>
-              </div>
+              <Button
+                type="button"
+                size="icon"
+                variant="ghost"
+                disabled={pending}
+                aria-label={`Delete ${card.word}`}
+                onClick={() => {
+                  setError(null);
+                  setPendingDelete(card);
+                }}
+                className="size-8 shrink-0 text-white/55 hover:bg-red-500/15 hover:text-red-200"
+              >
+                <Trash2 className="size-4" />
+              </Button>
             </div>
           </li>
         ))}
