@@ -67,3 +67,16 @@ npm run test:platform
 - `POST /api/contact` validates payload with Zod
 - Server-side Mailgun SDK sends inquiry notifications
 - Secrets remain on the server via environment variables
+
+## Mobile app (Expo)
+
+The learner mobile app lives in [`mobile/`](mobile/). It uses the Bearer JWT `/api/v1` API (not NextAuth cookies).
+
+```bash
+cd mobile
+cp .env.example .env
+npm install
+npm start
+```
+
+See [`mobile/README.md`](mobile/README.md) for device URL notes (`EXPO_PUBLIC_API_URL`).
