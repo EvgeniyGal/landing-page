@@ -222,3 +222,39 @@ html.dark .ink-button {
     transform: none;
   }
 }
+
+@keyframes anaglyph-pulse-left {
+  0%,
+  100% {
+    opacity: 0.55;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
+@keyframes anaglyph-pulse-right {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.55;
+  }
+}
+
+.anaglyph-pulse-left {
+  animation: anaglyph-pulse-left 1.2s ease-in-out infinite;
+}
+
+.anaglyph-pulse-right {
+  animation: anaglyph-pulse-right 1.2s ease-in-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .anaglyph-pulse-left,
+  .anaglyph-pulse-right {
+    animation: none;
+    opacity: 0.85;
+  }
+}

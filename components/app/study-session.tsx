@@ -3,7 +3,14 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { reviewCardAction } from "@/app/app/actions";
+import { DichopticRatingButton } from "@/components/app/dichoptic-rating-button";
+import { DichopticText } from "@/components/app/dichoptic-text";
+import { useLazyEye } from "@/components/app/lazy-eye-provider";
 import { SpeakerButton } from "@/components/app/speaker-button";
+import {
+  backgroundCss,
+  neutralForeground,
+} from "@/lib/anaglyph/color";
 import type { ReviewRating } from "@/lib/db/schema";
 import {
   advanceStudyQueue,
@@ -60,11 +67,24 @@ export function StudySession({
   cards: StudyCard[];
 }) {
   const router = useRouter();
+  const { lazyEyeEnabled, activeProfile } = useLazyEye();
   const [queue, setQueue] = useState(initialCards);
   const [step, setStep] = useState<RevealStep>("front");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [initialCount] = useState(initialCards.length);
+
+  const dichoptic = lazyEyeEnabled && activeProfile;
+  const colors = dichoptic
+    ? {
+        leftHue: activeProfile.leftHue,
+        leftLightness: activeProfile.leftLightness,
+        rightHue: activeProfile.rightHue,
+        rightLightness: activeProfile.rightLightness,
+      }
+    : null;
+  const surfaceBg = dichoptic ? backgroundCss(activeProfile.background) : undefined;
+  const surfaceFg = dichoptic ? neutralForeground(activeProfile.background) : undefined;
 
   const { due, waiting } = splitDueQueue(queue, now);
   const card = due[0];
@@ -113,6 +133,7 @@ export function StudySession({
   const progress = ((reviewed + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
   const showExamples = step === "examples" || step === "answer";
   const showAnswer = step === "answer";
+  const titleText = `${head}${card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}`;
 
   function advanceReveal() {
     setStep((current) => nextStep(current));
@@ -146,13 +167,19 @@ export function StudySession({
   return (
     <div
       className="relative min-h-[calc(100dvh-3.5rem)] bg-cover bg-center px-4 py-6"
-      style={{ backgroundImage: "url(/app/study-map.jpg), linear-gradient(180deg,#1a140e,#0c0c0c)" }}
+      style={
+        dichoptic
+          ? { background: surfaceBg, color: surfaceFg }
+          : { backgroundImage: "url(/app/study-map.jpg), linear-gradient(180deg,#1a140e,#0c0c0c)" }
+      }
     >
       <div className="mx-auto max-w-3xl">
         <div className="mb-4 flex items-center justify-between gap-4">
-          <p className="text-lg font-medium">{deckName}</p>
-          <p className="text-sm text-white/55">
-            {remainingCount} left
+          <p className="text-lg font-medium" style={dichoptic ? { color: surfaceFg } : undefined}>
+            {deckName}
+          </p>
+          <p className="text-sm" style={dichoptic ? { color: surfaceFg, opacity: 0.7 } : undefined}>
+            <span className={dichoptic ? undefined : "text-white/55"}>{remainingCount} left</span>
           </p>
         </div>
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-black/40">
@@ -173,20 +200,43 @@ export function StudySession({
                   }
                 }
           }
-          className={`relative min-h-[320px] rounded-2xl border border-white/10 bg-[#2a241c]/80 p-8 shadow-2xl backdrop-blur-sm outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+          className={`relative min-h-[320px] rounded-2xl border border-white/10 p-8 shadow-2xl outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
             showAnswer ? "cursor-default" : "cursor-pointer"
-          }`}
-          style={{ backgroundImage: "url(/app/card-parchment.jpg)", backgroundSize: "cover" }}
+          } ${dichoptic ? "" : "bg-[#2a241c]/80 backdrop-blur-sm"}`}
+          style={
+            dichoptic
+              ? { background: surfaceBg, color: surfaceFg }
+              : { backgroundImage: "url(/app/card-parchment.jpg)", backgroundSize: "cover" }
+          }
         >
-          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-black/45" />
+          {dichoptic ? null : <div className="pointer-events-none absolute inset-0 rounded-2xl bg-black/45" />}
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
               <div>
                 <p className="text-3xl font-semibold">
-                  {head}
-                  {card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}
+                  {colors ? (
+                    <DichopticText
+                      text={titleText}
+                      colors={colors}
+                      mode="letters"
+                      neutralColor={surfaceFg ?? "#fff"}
+                    />
+                  ) : (
+                    titleText
+                  )}
                 </p>
-                <p className="mt-2 text-white/70">{card.transcription}</p>
+                <p className={`mt-2 ${dichoptic ? "opacity-80" : "text-white/70"}`}>
+                  {colors && card.transcription ? (
+                    <DichopticText
+                      text={card.transcription}
+                      colors={colors}
+                      mode="letters"
+                      neutralColor={surfaceFg ?? "#fff"}
+                    />
+                  ) : (
+                    card.transcription
+                  )}
+                </p>
               </div>
               {card.audio.word ? (
                 <span onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
@@ -197,14 +247,24 @@ export function StudySession({
 
             {showExamples ? (
               <div className="mt-8 space-y-5">
-                <ol className="space-y-3 text-base leading-7 text-white/90">
+                <ol className={`space-y-3 text-base leading-7 ${dichoptic ? "" : "text-white/90"}`}>
                   {card.examples.map((example, exampleIndex) => {
                     const kind = `example_${exampleIndex + 1}` as "example_1" | "example_2" | "example_3";
                     const url = card.audio[kind];
                     return (
                       <li key={example} className="flex items-start justify-between gap-3">
                         <span>
-                          {exampleIndex + 1}. {example}
+                          {exampleIndex + 1}.{" "}
+                          {colors ? (
+                            <DichopticText
+                              text={example}
+                              colors={colors}
+                              mode="syllables"
+                              neutralColor={surfaceFg ?? "#fff"}
+                            />
+                          ) : (
+                            example
+                          )}
                         </span>
                         {url ? (
                           <span onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
@@ -223,7 +283,18 @@ export function StudySession({
                 {showAnswer ? (
                   <>
                     <hr className="border-white/15" />
-                    <p className="text-white/90">{card.definition}</p>
+                    <p className={dichoptic ? undefined : "text-white/90"}>
+                      {colors && card.definition ? (
+                        <DichopticText
+                          text={card.definition}
+                          colors={colors}
+                          mode="syllables"
+                          neutralColor={surfaceFg ?? "#fff"}
+                        />
+                      ) : (
+                        card.definition
+                      )}
+                    </p>
                   </>
                 ) : null}
               </div>
@@ -234,18 +305,29 @@ export function StudySession({
         <div className="mt-8 flex justify-center">
           {showAnswer ? (
             <div className="grid w-full max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {RATINGS.map((rating) => (
-                <button
-                  key={rating.id}
-                  type="button"
-                  disabled={busy}
-                  onClick={() => void rate(rating.id)}
-                  className={`rounded-xl px-3 py-3 ${rating.className}`}
-                >
-                  <span className="block text-sm font-semibold">{rating.label}</span>
-                  <span className="block text-xs opacity-80">{card.intervals?.[rating.id] ?? ""}</span>
-                </button>
-              ))}
+              {RATINGS.map((rating) =>
+                colors ? (
+                  <DichopticRatingButton
+                    key={rating.id}
+                    label={rating.label}
+                    interval={card.intervals?.[rating.id]}
+                    colors={colors}
+                    disabled={busy}
+                    onClick={() => void rate(rating.id)}
+                  />
+                ) : (
+                  <button
+                    key={rating.id}
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void rate(rating.id)}
+                    className={`rounded-xl px-3 py-3 ${rating.className}`}
+                  >
+                    <span className="block text-sm font-semibold">{rating.label}</span>
+                    <span className="block text-xs opacity-80">{card.intervals?.[rating.id] ?? ""}</span>
+                  </button>
+                ),
+              )}
             </div>
           ) : (
             <button

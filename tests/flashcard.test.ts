@@ -4,6 +4,8 @@ import { generatedCardSchema } from "../lib/flashcard/schema";
 import { formatBackDefinition, formatFlashcardText } from "../lib/flashcard/format";
 import { isRestrictedVoiceError, isTtsConfigured } from "../lib/elevenlabs/tts";
 import { isPrivateStoreError } from "../lib/storage/blob";
+import { dichopticLetters, dichopticSyllables } from "../lib/anaglyph/render";
+import { segmentLetters, segmentSyllables } from "../lib/anaglyph/segment";
 import { advanceStudyQueue, splitDueQueue } from "../lib/srs/queue";
 import { newCardSchedule, previewIntervals, scheduleReview } from "../lib/srs/sm2";
 import { parseTtsCallback, ttsCallbackData } from "../lib/telegram/parse";
@@ -142,6 +144,36 @@ test("splitDueQueue separates ready and waiting cards", () => {
     waiting.map((card) => card.id),
     ["later"],
   );
+});
+
+test("segmentLetters marks letters as content and spaces as neutral", () => {
+  const segments = segmentLetters("Hi!");
+  assert.deepEqual(
+    segments.map((segment) => [segment.text, segment.kind]),
+    [
+      ["H", "content"],
+      ["i", "content"],
+      ["!", "neutral"],
+    ],
+  );
+});
+
+test("dichopticLetters alternates eye colors across letters", () => {
+  const colors = { leftHue: 0, leftLightness: 50, rightHue: 180, rightLightness: 50 };
+  const segments = dichopticLetters("ab", colors);
+  assert.equal(segments[0]?.eye, "left");
+  assert.equal(segments[1]?.eye, "right");
+});
+
+test("segmentSyllables keeps punctuation neutral", () => {
+  const segments = segmentSyllables("hello, world");
+  assert.ok(segments.some((segment) => segment.kind === "neutral" && segment.text.includes(",")));
+  assert.ok(dichopticSyllables("banana", {
+    leftHue: 0,
+    leftLightness: 50,
+    rightHue: 180,
+    rightLightness: 50,
+  }).some((segment) => segment.kind === "content"));
 });
 
 test("TTS callback round-trips a card id and kind", () => {

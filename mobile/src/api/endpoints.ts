@@ -1,5 +1,7 @@
 import { apiRequest } from "./client";
 import type {
+  AnaglyphBackground,
+  AnaglyphProfile,
   AudioKind,
   DeckCounts,
   DeckSummary,
@@ -7,6 +9,7 @@ import type {
   FlashcardWrite,
   ReviewRating,
   User,
+  UserPreferences,
 } from "./types";
 
 export async function login(email: string, password: string) {
@@ -91,5 +94,63 @@ export async function deleteAudio(id: string, kind: AudioKind | "all_examples") 
   return apiRequest<{ ok: true }>(`/api/v1/flashcards/${id}/audio`, {
     method: "DELETE",
     body: { kind },
+  });
+}
+
+export async function getPreferences() {
+  return apiRequest<{ preferences: UserPreferences }>("/api/v1/me/preferences");
+}
+
+export async function setPreferences(lazyEyeEnabled: boolean) {
+  return apiRequest<{ preferences: UserPreferences }>("/api/v1/me/preferences", {
+    method: "PATCH",
+    body: { lazyEyeEnabled },
+  });
+}
+
+export async function listAnaglyphProfiles() {
+  return apiRequest<{ profiles: AnaglyphProfile[] }>("/api/v1/anaglyph-profiles");
+}
+
+export async function createAnaglyphProfile(input: {
+  name: string;
+  leftHue: number;
+  leftLightness: number;
+  rightHue: number;
+  rightLightness: number;
+  background: AnaglyphBackground;
+}) {
+  return apiRequest<{ profile: AnaglyphProfile }>("/api/v1/anaglyph-profiles", {
+    method: "POST",
+    body: input,
+  });
+}
+
+export async function updateAnaglyphProfile(
+  id: string,
+  input: Partial<{
+    name: string;
+    leftHue: number;
+    leftLightness: number;
+    rightHue: number;
+    rightLightness: number;
+    background: AnaglyphBackground;
+  }>,
+) {
+  return apiRequest<{ profile: AnaglyphProfile }>(`/api/v1/anaglyph-profiles/${id}`, {
+    method: "PATCH",
+    body: input,
+  });
+}
+
+export async function activateAnaglyphProfile(id: string) {
+  return apiRequest<{ profile: AnaglyphProfile }>(`/api/v1/anaglyph-profiles/${id}/activate`, {
+    method: "POST",
+  });
+}
+
+export async function deleteAnaglyphProfile(id: string) {
+  return apiRequest<{ ok: true }>(`/api/v1/anaglyph-profiles/${id}`, {
+    method: "DELETE",
   });
 }

@@ -4,8 +4,12 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router/react-navigation";
 import { getStudyQueue, reviewFlashcard } from "@/src/api/endpoints";
 import type { AudioKind, Flashcard, ReviewRating } from "@/src/api/types";
+import { useLazyEye } from "@/src/anaglyph/LazyEyeContext";
+import { DichopticRatingButton } from "@/src/components/anaglyph/DichopticRatingButton";
+import { DichopticText } from "@/src/components/anaglyph/DichopticText";
 import { SpeakerButton } from "@/src/components/SpeakerButton";
 import { ErrorText, LoadingBlock } from "@/src/components/ui";
+import { backgroundCss, neutralForeground } from "@/src/lib/anaglyph/color";
 import { cardHead, messageFromError } from "@/src/lib/format";
 import {
   advanceStudyQueue,
@@ -44,6 +48,7 @@ function nextStep(step: RevealStep): RevealStep {
 
 export default function StudyScreen() {
   const { id: deckId } = useLocalSearchParams<{ id: string }>();
+  const { lazyEyeEnabled, activeProfile } = useLazyEye();
   const [deckName, setDeckName] = useState("");
   const [queue, setQueue] = useState<Flashcard[]>([]);
   const [initialCount, setInitialCount] = useState(0);
@@ -52,6 +57,18 @@ export default function StudyScreen() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
+
+  const dichoptic = lazyEyeEnabled && activeProfile;
+  const anaglyphColors = dichoptic
+    ? {
+        leftHue: activeProfile.leftHue,
+        leftLightness: activeProfile.leftLightness,
+        rightHue: activeProfile.rightHue,
+        rightLightness: activeProfile.rightLightness,
+      }
+    : null;
+  const surfaceBg = dichoptic ? backgroundCss(activeProfile.background) : colors.bg;
+  const surfaceFg = dichoptic ? neutralForeground(activeProfile.background) : colors.text;
 
   useFocusEffect(
     useCallback(() => {
@@ -144,6 +161,7 @@ export default function StudyScreen() {
   const progress = ((reviewed + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
   const showExamples = step === "examples" || step === "answer";
   const showAnswer = step === "answer";
+  const titleText = `${head}${card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}`;
 
   function advanceReveal() {
     setStep((current) => nextStep(current));
@@ -177,10 +195,13 @@ export default function StudyScreen() {
   }
 
   return (
-    <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+    <ScrollView
+      style={[styles.screen, { backgroundColor: surfaceBg }]}
+      contentContainerStyle={styles.content}
+    >
       <View style={styles.topRow}>
-        <Text style={styles.deckName}>{deckName}</Text>
-        <Text style={styles.counter}>{remainingCount} left</Text>
+        <Text style={[styles.deckName, { color: surfaceFg }]}>{deckName}</Text>
+        <Text style={[styles.counter, { color: surfaceFg, opacity: 0.7 }]}>{remainingCount} left</Text>
       </View>
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${Math.max(progress, 8)}%` }]} />
@@ -189,15 +210,36 @@ export default function StudyScreen() {
       <Pressable
         disabled={showAnswer}
         onPress={advanceReveal}
-        style={({ pressed }) => [styles.card, !showAnswer && pressed && styles.pressed]}
+        style={({ pressed }) => [
+          styles.card,
+          dichoptic && { backgroundColor: surfaceBg },
+          !showAnswer && pressed && styles.pressed,
+        ]}
       >
         <View style={styles.headRow}>
           <View style={styles.flex}>
-            <Text style={styles.head}>
-              {head}
-              {card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}
-            </Text>
-            <Text style={styles.transcription}>{card.transcription}</Text>
+            {anaglyphColors ? (
+              <DichopticText
+                text={titleText}
+                colors={anaglyphColors}
+                mode="letters"
+                neutralColor={surfaceFg}
+                style={styles.head}
+              />
+            ) : (
+              <Text style={styles.head}>{titleText}</Text>
+            )}
+            {anaglyphColors && card.transcription ? (
+              <DichopticText
+                text={card.transcription}
+                colors={anaglyphColors}
+                mode="letters"
+                neutralColor={surfaceFg}
+                style={styles.transcription}
+              />
+            ) : (
+              <Text style={styles.transcription}>{card.transcription}</Text>
+            )}
           </View>
           {card.audio.word ? <SpeakerButton url={card.audio.word} /> : null}
         </View>
@@ -212,9 +254,19 @@ export default function StudyScreen() {
               const url = card.audio[kind];
               return (
                 <View key={`${card.id}-${kind}`} style={styles.exampleRow}>
-                  <Text style={styles.exampleText}>
-                    {exampleIndex + 1}. {example}
-                  </Text>
+                  {anaglyphColors ? (
+                    <DichopticText
+                      text={`${exampleIndex + 1}. ${example}`}
+                      colors={anaglyphColors}
+                      mode="syllables"
+                      neutralColor={surfaceFg}
+                      style={styles.exampleText}
+                    />
+                  ) : (
+                    <Text style={styles.exampleText}>
+                      {exampleIndex + 1}. {example}
+                    </Text>
+                  )}
                   {url ? <SpeakerButton url={url} /> : null}
                 </View>
               );
@@ -222,7 +274,17 @@ export default function StudyScreen() {
             {showAnswer ? (
               <>
                 <View style={styles.divider} />
-                <Text style={styles.definition}>{card.definition}</Text>
+                {anaglyphColors && card.definition ? (
+                  <DichopticText
+                    text={card.definition}
+                    colors={anaglyphColors}
+                    mode="syllables"
+                    neutralColor={surfaceFg}
+                    style={styles.definition}
+                  />
+                ) : (
+                  <Text style={styles.definition}>{card.definition}</Text>
+                )}
               </>
             ) : null}
           </View>
@@ -234,24 +296,35 @@ export default function StudyScreen() {
       <View style={styles.footer}>
         {showAnswer ? (
           <View style={styles.ratings}>
-            {RATINGS.map((rating) => (
-              <Pressable
-                key={rating.id}
-                disabled={busy}
-                onPress={() => void rate(rating.id)}
-                style={({ pressed }) => [
-                  styles.rating,
-                  { backgroundColor: rating.bg },
-                  pressed && styles.pressed,
-                  busy && styles.disabled,
-                ]}
-              >
-                <Text style={[styles.ratingLabel, { color: rating.text }]}>{rating.label}</Text>
-                <Text style={[styles.ratingInterval, { color: rating.text }]}>
-                  {card.intervals?.[rating.id] ?? ""}
-                </Text>
-              </Pressable>
-            ))}
+            {RATINGS.map((rating) =>
+              anaglyphColors ? (
+                <DichopticRatingButton
+                  key={rating.id}
+                  label={rating.label}
+                  interval={card.intervals?.[rating.id]}
+                  colors={anaglyphColors}
+                  disabled={busy}
+                  onPress={() => void rate(rating.id)}
+                />
+              ) : (
+                <Pressable
+                  key={rating.id}
+                  disabled={busy}
+                  onPress={() => void rate(rating.id)}
+                  style={({ pressed }) => [
+                    styles.rating,
+                    { backgroundColor: rating.bg },
+                    pressed && styles.pressed,
+                    busy && styles.disabled,
+                  ]}
+                >
+                  <Text style={[styles.ratingLabel, { color: rating.text }]}>{rating.label}</Text>
+                  <Text style={[styles.ratingInterval, { color: rating.text }]}>
+                    {card.intervals?.[rating.id] ?? ""}
+                  </Text>
+                </Pressable>
+              ),
+            )}
           </View>
         ) : (
           <Pressable style={styles.revealButton} onPress={advanceReveal}>

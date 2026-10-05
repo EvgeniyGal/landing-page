@@ -7,6 +7,15 @@ import { createFlashcardForUser } from "@/lib/flashcard/create";
 import { createDeckForUser, deleteDeckForUser } from "@/lib/flashcard/decks";
 import { deleteFlashcardForUser, updateFlashcardForUser } from "@/lib/flashcard/mutate";
 import { serializeFlashcard } from "@/lib/api/serialize";
+import {
+  activateAnaglyphProfile,
+  createAnaglyphProfile,
+  deleteAnaglyphProfile,
+  serializeAnaglyphProfile,
+  setLazyEyeEnabled,
+  updateAnaglyphProfile,
+  type AnaglyphProfileInput,
+} from "@/lib/anaglyph/profiles";
 import { reviewCard } from "@/lib/srs/review";
 import type { ReviewRating } from "@/lib/db/schema";
 import type { GeneratedCard } from "@/lib/flashcard/schema";
@@ -216,5 +225,60 @@ export async function deleteDeckAction(input: { deckId: string }) {
   }
   revalidatePath("/app");
   revalidatePath(`/app/decks/${input.deckId}`);
+  return { ok: true as const };
+}
+
+export async function setLazyEyeEnabledAction(lazyEyeEnabled: boolean) {
+  const user = await requireLearner();
+  const preferences = await setLazyEyeEnabled(user.id, lazyEyeEnabled);
+  revalidatePath("/app");
+  revalidatePath("/app/settings");
+  return { ok: true as const, lazyEyeEnabled: preferences.lazyEyeEnabled };
+}
+
+export async function createAnaglyphProfileAction(input: AnaglyphProfileInput) {
+  const user = await requireLearner();
+  const result = await createAnaglyphProfile(user.id, input);
+  if (!result.ok) {
+    return { ok: false as const, error: "Enter a profile name." };
+  }
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
+  return { ok: true as const, profile: serializeAnaglyphProfile(result.profile) };
+}
+
+export async function updateAnaglyphProfileAction(
+  profileId: string,
+  input: Partial<AnaglyphProfileInput>,
+) {
+  const user = await requireLearner();
+  const result = await updateAnaglyphProfile(user.id, profileId, input);
+  if (!result.ok) {
+    return { ok: false as const, error: result.reason === "invalid_name" ? "Enter a profile name." : "Profile not found." };
+  }
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
+  return { ok: true as const, profile: serializeAnaglyphProfile(result.profile) };
+}
+
+export async function activateAnaglyphProfileAction(profileId: string) {
+  const user = await requireLearner();
+  const result = await activateAnaglyphProfile(user.id, profileId);
+  if (!result.ok) {
+    return { ok: false as const, error: "Profile not found." };
+  }
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
+  return { ok: true as const, profile: serializeAnaglyphProfile(result.profile) };
+}
+
+export async function deleteAnaglyphProfileAction(profileId: string) {
+  const user = await requireLearner();
+  const result = await deleteAnaglyphProfile(user.id, profileId);
+  if (!result.ok) {
+    return { ok: false as const, error: "Profile not found." };
+  }
+  revalidatePath("/app/settings");
+  revalidatePath("/app");
   return { ok: true as const };
 }

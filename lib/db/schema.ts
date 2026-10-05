@@ -19,6 +19,7 @@ export const userStatusEnum = pgEnum("user_status", ["invited", "active", "disab
 export const cardStateEnum = pgEnum("card_state", ["new", "learning", "review", "relearning"]);
 export const audioKindEnum = pgEnum("audio_kind", ["word", "example_1", "example_2", "example_3"]);
 export const reviewRatingEnum = pgEnum("review_rating", ["again", "hard", "good", "easy"]);
+export const anaglyphBackgroundEnum = pgEnum("anaglyph_background", ["black", "gray", "white"]);
 
 export const users = pgTable("users", {
   id: uuid("id").defaultRandom().primaryKey(),
@@ -171,10 +172,41 @@ export const reviewLogs = pgTable("review_logs", {
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }).defaultNow().notNull(),
 }, (table) => [index("review_logs_card_idx").on(table.flashcardId)]);
 
-export const usersRelations = relations(users, ({ many }) => ({
+export const userPreferences = pgTable("user_preferences", {
+  userId: uuid("user_id")
+    .primaryKey()
+    .references(() => users.id, { onDelete: "cascade" }),
+  lazyEyeEnabled: boolean("lazy_eye_enabled").notNull().default(false),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+});
+
+export const anaglyphProfiles = pgTable("anaglyph_profiles", {
+  id: uuid("id").defaultRandom().primaryKey(),
+  userId: uuid("user_id")
+    .notNull()
+    .references(() => users.id, { onDelete: "cascade" }),
+  name: varchar("name", { length: 255 }).notNull(),
+  isActive: boolean("is_active").notNull().default(false),
+  leftHue: real("left_hue").notNull().default(0),
+  leftLightness: real("left_lightness").notNull().default(50),
+  rightHue: real("right_hue").notNull().default(180),
+  rightLightness: real("right_lightness").notNull().default(50),
+  background: anaglyphBackgroundEnum("background").notNull().default("black"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+}, (table) => [
+  index("anaglyph_profiles_user_idx").on(table.userId),
+]);
+
+export const usersRelations = relations(users, ({ many, one }) => ({
   decks: many(decks),
   flashcards: many(flashcards),
   oauthAccounts: many(oauthAccounts),
+  preferences: one(userPreferences, {
+    fields: [users.id],
+    references: [userPreferences.userId],
+  }),
+  anaglyphProfiles: many(anaglyphProfiles),
 }));
 
 export const decksRelations = relations(decks, ({ one, many }) => ({
@@ -197,14 +229,25 @@ export const oauthAccountsRelations = relations(oauthAccounts, ({ one }) => ({
   user: one(users, { fields: [oauthAccounts.userId], references: [users.id] }),
 }));
 
+export const userPreferencesRelations = relations(userPreferences, ({ one }) => ({
+  user: one(users, { fields: [userPreferences.userId], references: [users.id] }),
+}));
+
+export const anaglyphProfilesRelations = relations(anaglyphProfiles, ({ one }) => ({
+  user: one(users, { fields: [anaglyphProfiles.userId], references: [users.id] }),
+}));
+
 export type User = typeof users.$inferSelect;
 export type NewUser = typeof users.$inferInsert;
 export type AppSettings = typeof appSettings.$inferSelect;
 export type Flashcard = typeof flashcards.$inferSelect;
 export type Deck = typeof decks.$inferSelect;
 export type FlashcardAudio = typeof flashcardAudio.$inferSelect;
+export type UserPreferences = typeof userPreferences.$inferSelect;
+export type AnaglyphProfile = typeof anaglyphProfiles.$inferSelect;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type UserStatus = (typeof userStatusEnum.enumValues)[number];
 export type CardState = (typeof cardStateEnum.enumValues)[number];
 export type AudioKind = (typeof audioKindEnum.enumValues)[number];
 export type ReviewRating = (typeof reviewRatingEnum.enumValues)[number];
+export type AnaglyphBackground = (typeof anaglyphBackgroundEnum.enumValues)[number];

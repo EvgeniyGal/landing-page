@@ -56,6 +56,25 @@ export type FlashcardWrite = {
   definition: string;
 };
 
+export type AnaglyphBackground = "black" | "gray" | "white";
+
+export type AnaglyphProfile = {
+  id: string;
+  name: string;
+  isActive: boolean;
+  leftHue: number;
+  leftLightness: number;
+  rightHue: number;
+  rightLightness: number;
+  background: AnaglyphBackground;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type UserPreferences = {
+  lazyEyeEnabled: boolean;
+};
+
 export type ApiErrorBody = {
   error?: string;
   code?: string;

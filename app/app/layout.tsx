@@ -1,6 +1,7 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { AppShell } from "@/components/app/app-shell";
+import { getLazyEyeStudyContext, serializeAnaglyphProfile } from "@/lib/anaglyph/profiles";
 
 export const metadata = {
   title: "Study",
@@ -15,8 +16,18 @@ export default async function LearnerLayout({ children }: { children: React.Reac
     redirect("/login");
   }
 
+  const context = await getLazyEyeStudyContext(session.user.id!);
+  const activeProfile = context.activeProfile
+    ? serializeAnaglyphProfile(context.activeProfile)
+    : null;
+
   return (
-    <AppShell email={session.user.email ?? ""} role={session.user.role}>
+    <AppShell
+      email={session.user.email ?? ""}
+      role={session.user.role}
+      lazyEyeEnabled={context.lazyEyeEnabled}
+      activeProfile={activeProfile}
+    >
       {children}
     </AppShell>
   );
