@@ -173,10 +173,12 @@ export function StudySession({
                   }
                 }
           }
-          className="relative min-h-[320px] rounded-2xl border border-white/10 bg-[#2a241c]/80 p-8 shadow-2xl backdrop-blur-sm outline-none focus-visible:ring-2 focus-visible:ring-white/40"
+          className={`relative min-h-[320px] rounded-2xl border border-white/10 bg-[#2a241c]/80 p-8 shadow-2xl backdrop-blur-sm outline-none focus-visible:ring-2 focus-visible:ring-white/40 ${
+            showAnswer ? "cursor-default" : "cursor-pointer"
+          }`}
           style={{ backgroundImage: "url(/app/card-parchment.jpg)", backgroundSize: "cover" }}
         >
-          <div className="absolute inset-0 rounded-2xl bg-black/45" />
+          <div className="pointer-events-none absolute inset-0 rounded-2xl bg-black/45" />
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
               <div>
