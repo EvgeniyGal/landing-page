@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useMemo, useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { setLazyEyeEnabledAction } from "@/app/app/actions";
+import { activateAnaglyphProfileAction, setLazyEyeEnabledAction } from "@/app/app/actions";
 import type { AnaglyphBackground } from "@/lib/db/schema";
 
 export type LazyEyeProfile = {
@@ -19,7 +19,9 @@ export type LazyEyeProfile = {
 type LazyEyeContextValue = {
   lazyEyeEnabled: boolean;
   activeProfile: LazyEyeProfile | null;
+  profiles: LazyEyeProfile[];
   setLazyEyeEnabled: (enabled: boolean) => void;
+  activateProfile: (profileId: string) => void;
   pending: boolean;
 };
 
@@ -28,20 +30,31 @@ const LazyEyeContext = createContext<LazyEyeContextValue | null>(null);
 export function LazyEyeProvider({
   lazyEyeEnabled,
   activeProfile,
+  profiles,
   children,
 }: {
   lazyEyeEnabled: boolean;
   activeProfile: LazyEyeProfile | null;
+  profiles: LazyEyeProfile[];
   children: React.ReactNode;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [optimisticEnabled, setOptimisticEnabled] = useOptimistic(lazyEyeEnabled);
+  const [optimisticProfiles, setActiveProfileId] = useOptimistic(
+    profiles,
+    (current, profileId: string) =>
+      current.map((profile) => ({ ...profile, isActive: profile.id === profileId })),
+  );
+
+  const optimisticActive =
+    optimisticProfiles.find((profile) => profile.isActive) ?? activeProfile;
 
   const value = useMemo<LazyEyeContextValue>(
     () => ({
       lazyEyeEnabled: optimisticEnabled,
-      activeProfile,
+      activeProfile: optimisticActive,
+      profiles: optimisticProfiles,
       pending,
       setLazyEyeEnabled: (enabled: boolean) => {
         startTransition(async () => {
@@ -50,8 +63,23 @@ export function LazyEyeProvider({
           router.refresh();
         });
       },
+      activateProfile: (profileId: string) => {
+        startTransition(async () => {
+          setActiveProfileId(profileId);
+          await activateAnaglyphProfileAction(profileId);
+          router.refresh();
+        });
+      },
     }),
-    [optimisticEnabled, activeProfile, pending, router, setOptimisticEnabled],
+    [
+      optimisticEnabled,
+      optimisticActive,
+      optimisticProfiles,
+      pending,
+      router,
+      setOptimisticEnabled,
+      setActiveProfileId,
+    ],
   );
 
   return <LazyEyeContext.Provider value={value}>{children}</LazyEyeContext.Provider>;

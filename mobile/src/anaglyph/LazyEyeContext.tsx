@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import {
+  activateAnaglyphProfile,
   getPreferences,
   listAnaglyphProfiles,
   setPreferences,
@@ -18,8 +19,10 @@ import { useAuth } from "@/src/auth/session";
 type LazyEyeContextValue = {
   lazyEyeEnabled: boolean;
   activeProfile: AnaglyphProfile | null;
+  profiles: AnaglyphProfile[];
   loading: boolean;
   setLazyEyeEnabled: (enabled: boolean) => Promise<void>;
+  activateProfile: (profileId: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
@@ -28,19 +31,19 @@ const LazyEyeContext = createContext<LazyEyeContextValue | null>(null);
 export function LazyEyeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [lazyEyeEnabled, setEnabled] = useState(false);
-  const [activeProfile, setActiveProfile] = useState<AnaglyphProfile | null>(null);
+  const [profiles, setProfiles] = useState<AnaglyphProfile[]>([]);
   const [loading, setLoading] = useState(true);
 
   const refresh = useCallback(async () => {
     if (!user) {
       setEnabled(false);
-      setActiveProfile(null);
+      setProfiles([]);
       setLoading(false);
       return;
     }
-    const [preferences, profiles] = await Promise.all([getPreferences(), listAnaglyphProfiles()]);
+    const [preferences, listed] = await Promise.all([getPreferences(), listAnaglyphProfiles()]);
     setEnabled(preferences.preferences.lazyEyeEnabled);
-    setActiveProfile(profiles.profiles.find((profile) => profile.isActive) ?? profiles.profiles[0] ?? null);
+    setProfiles(listed.profiles);
   }, [user]);
 
   useEffect(() => {
@@ -52,7 +55,7 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
       } catch {
         if (!cancelled) {
           setEnabled(false);
-          setActiveProfile(null);
+          setProfiles([]);
         }
       } finally {
         if (!cancelled) {
@@ -71,15 +74,26 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
     await setPreferences(enabled);
   }, []);
 
+  const activateProfile = useCallback(async (profileId: string) => {
+    await activateAnaglyphProfile(profileId);
+    setProfiles((current) =>
+      current.map((profile) => ({ ...profile, isActive: profile.id === profileId })),
+    );
+  }, []);
+
+  const activeProfile = profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
+
   const value = useMemo(
     () => ({
       lazyEyeEnabled,
       activeProfile,
+      profiles,
       loading,
       setLazyEyeEnabled,
+      activateProfile,
       refresh,
     }),
-    [lazyEyeEnabled, activeProfile, loading, setLazyEyeEnabled, refresh],
+    [lazyEyeEnabled, activeProfile, profiles, loading, setLazyEyeEnabled, activateProfile, refresh],
   );
 
   return <LazyEyeContext.Provider value={value}>{children}</LazyEyeContext.Provider>;

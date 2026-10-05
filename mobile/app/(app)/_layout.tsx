@@ -29,6 +29,24 @@ function ModeToggle() {
   );
 }
 
+function GlassesChip() {
+  const { lazyEyeEnabled, activeProfile } = useLazyEye();
+  if (!lazyEyeEnabled || !activeProfile) {
+    return null;
+  }
+  return (
+    <Pressable
+      onPress={() => router.push("/(app)/settings")}
+      style={styles.glassesChip}
+      hitSlop={6}
+    >
+      <Text style={styles.glassesChipText} numberOfLines={1}>
+        {activeProfile.name}
+      </Text>
+    </Pressable>
+  );
+}
+
 function HeaderRight() {
   const { user, logout } = useAuth();
   if (!user) {
@@ -37,6 +55,7 @@ function HeaderRight() {
   return (
     <View style={styles.headerRight}>
       <ModeToggle />
+      <GlassesChip />
       <Pressable
         onPress={() => router.push("/(app)/settings")}
         style={styles.avatar}
@@ -69,7 +88,7 @@ function AppStack() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "Home" }} />
-      <Stack.Screen name="settings" options={{ title: "Settings" }} />
+      <Stack.Screen name="settings" options={{ title: "Glasses" }} />
       <Stack.Screen name="decks/[id]/index" options={{ title: "Dictionary" }} />
       <Stack.Screen name="decks/[id]/add" options={{ title: "Add card" }} />
       <Stack.Screen name="decks/[id]/study" options={{ title: "Study", headerRight: () => <ModeToggle /> }} />
@@ -126,6 +145,18 @@ const styles = StyleSheet.create({
   },
   toggleTextOn: {
     color: "#000",
+  },
+  glassesChip: {
+    maxWidth: 88,
+    borderRadius: 999,
+    backgroundColor: "rgba(255,255,255,0.08)",
+    paddingHorizontal: 8,
+    paddingVertical: 5,
+  },
+  glassesChipText: {
+    color: colors.text,
+    fontSize: 11,
+    fontWeight: "700",
   },
   avatar: {
     width: 28,

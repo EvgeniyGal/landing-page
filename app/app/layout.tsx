@@ -17,6 +17,7 @@ export default async function LearnerLayout({ children }: { children: React.Reac
   }
 
   const context = await getLazyEyeStudyContext(session.user.id!);
+  const profiles = context.profiles.map(serializeAnaglyphProfile);
   const activeProfile = context.activeProfile
     ? serializeAnaglyphProfile(context.activeProfile)
     : null;
@@ -27,6 +28,7 @@ export default async function LearnerLayout({ children }: { children: React.Reac
       role={session.user.role}
       lazyEyeEnabled={context.lazyEyeEnabled}
       activeProfile={activeProfile}
+      profiles={profiles}
     >
       {children}
     </AppShell>

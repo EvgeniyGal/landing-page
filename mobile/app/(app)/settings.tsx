@@ -40,6 +40,8 @@ export default function SettingsScreen() {
   const [loading, setLoading] = useState(true);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [creating, setCreating] = useState(false);
+  const [newName, setNewName] = useState("");
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -49,7 +51,7 @@ export default function SettingsScreen() {
       setProfiles(result.profiles);
       setSelectedId(result.profiles.find((p) => p.isActive)?.id ?? result.profiles[0]?.id ?? "");
     } catch (err) {
-      setError(messageFromError(err, "Could not load glasses profiles."));
+      setError(messageFromError(err, "Could not load glasses."));
     } finally {
       setLoading(false);
     }
@@ -84,51 +86,98 @@ export default function SettingsScreen() {
     );
   }
 
+  async function choosePreset(profileId: string) {
+    setSelectedId(profileId);
+    if (profiles.find((profile) => profile.id === profileId)?.isActive) {
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      await activateAnaglyphProfile(profileId);
+      setProfiles((current) =>
+        current.map((profile) => ({ ...profile, isActive: profile.id === profileId })),
+      );
+      await refresh();
+    } catch (err) {
+      setError(messageFromError(err, "Could not switch glasses."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function save() {
     if (!selected) {
+      return;
+    }
+    if (!selected.name.trim()) {
+      setError("Give these glasses a name.");
       return;
     }
     setBusy(true);
     setError(null);
     try {
       await updateAnaglyphProfile(selected.id, {
-        name: selected.name,
+        name: selected.name.trim(),
         leftHue: selected.leftHue,
         leftLightness: selected.leftLightness,
         rightHue: selected.rightHue,
         rightLightness: selected.rightLightness,
         background: selected.background,
       });
-      await refresh();
+      await Promise.all([load(), refresh()]);
     } catch (err) {
-      setError(messageFromError(err, "Could not save profile."));
+      setError(messageFromError(err, "Could not save glasses."));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function createNamed() {
+    const name = newName.trim();
+    if (!name) {
+      setError("Enter a name for the new glasses.");
+      return;
+    }
+    setBusy(true);
+    setError(null);
+    try {
+      const created = await createAnaglyphProfile({
+        name,
+        leftHue: selected?.leftHue ?? 0,
+        leftLightness: selected?.leftLightness ?? 50,
+        rightHue: selected?.rightHue ?? 180,
+        rightLightness: selected?.rightLightness ?? 50,
+        background: selected?.background ?? "black",
+      });
+      await activateAnaglyphProfile(created.profile.id);
+      setCreating(false);
+      setNewName("");
+      await Promise.all([load(), refresh()]);
+    } catch (err) {
+      setError(messageFromError(err, "Could not save glasses."));
     } finally {
       setBusy(false);
     }
   }
 
   if (loading) {
-    return <LoadingBlock label="Loading settings…" />;
+    return <LoadingBlock label="Loading glasses…" />;
   }
 
   if (!selected || !anaglyphColors) {
     return (
-      <View style={styles.screen}>
+      <View style={styles.screenPad}>
         <ErrorText>{error}</ErrorText>
-        <Pressable
-          style={styles.primaryButton}
-          onPress={() => {
-            void createAnaglyphProfile({
-              name: "Default",
-              leftHue: 0,
-              leftLightness: 50,
-              rightHue: 180,
-              rightLightness: 50,
-              background: "black",
-            }).then(load);
-          }}
-        >
-          <Text style={styles.primaryButtonText}>Create profile</Text>
+        <TextInput
+          value={newName}
+          onChangeText={setNewName}
+          placeholder="e.g. Phone, Laptop"
+          placeholderTextColor={colors.muted}
+          style={styles.input}
+        />
+        <Pressable style={styles.primaryButton} onPress={() => void createNamed()}>
+          <Text style={styles.primaryButtonText}>Save glasses</Text>
         </Pressable>
       </View>
     );
@@ -142,30 +191,84 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <Text style={styles.title}>Glasses settings</Text>
-      <Text style={styles.subtitle}>Save one profile per screen — phones and monitors differ.</Text>
+      <Text style={styles.title}>Glasses</Text>
+      <Text style={styles.subtitle}>Name each pair for a screen, then tap a preset to use it.</Text>
       <ErrorText>{error}</ErrorText>
 
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.chips}>
-        {profiles.map((profile) => (
+      <Pressable
+        style={styles.secondaryButton}
+        disabled={busy}
+        onPress={() => {
+          setCreating(true);
+          setNewName("");
+          setError(null);
+        }}
+      >
+        <Text style={styles.secondaryButtonText}>Save new glasses</Text>
+      </Pressable>
+
+      {creating ? (
+        <View style={styles.createBox}>
+          <TextInput
+            value={newName}
+            onChangeText={setNewName}
+            placeholder="Glasses name (Phone, Laptop…)"
+            placeholderTextColor={colors.muted}
+            style={styles.input}
+            autoFocus
+          />
+          <View style={styles.row}>
+            <Pressable style={styles.primaryButtonInline} disabled={busy} onPress={() => void createNamed()}>
+              <Text style={styles.primaryButtonText}>Save</Text>
+            </Pressable>
+            <Pressable
+              style={styles.secondaryButtonInline}
+              disabled={busy}
+              onPress={() => {
+                setCreating(false);
+                setNewName("");
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Cancel</Text>
+            </Pressable>
+          </View>
+        </View>
+      ) : null}
+
+      <Text style={styles.label}>Choose preset</Text>
+      {profiles.map((profile) => {
+        const profileColors = {
+          leftHue: profile.leftHue,
+          leftLightness: profile.leftLightness,
+          rightHue: profile.rightHue,
+          rightLightness: profile.rightLightness,
+        };
+        return (
           <Pressable
             key={profile.id}
-            onPress={() => setSelectedId(profile.id)}
-            style={[styles.chip, profile.id === selected.id && styles.chipActive]}
+            disabled={busy}
+            onPress={() => void choosePreset(profile.id)}
+            style={[styles.presetCard, profile.isActive && styles.presetCardActive]}
           >
-            <Text style={styles.chipText}>
-              {profile.name}
-              {profile.isActive ? " · active" : ""}
-            </Text>
+            <View style={styles.swatchPair}>
+              <View style={[styles.dot, { backgroundColor: eyeColor(profileColors, "left") }]} />
+              <View style={[styles.dotOverlap, { backgroundColor: eyeColor(profileColors, "right") }]} />
+            </View>
+            <View style={styles.presetCopy}>
+              <Text style={styles.presetName}>{profile.name}</Text>
+              <Text style={styles.presetMeta}>{profile.background} background</Text>
+            </View>
+            <Text style={styles.presetStatus}>{profile.isActive ? "In use" : "Tap to use"}</Text>
           </Pressable>
-        ))}
-      </ScrollView>
+        );
+      })}
 
+      <Text style={styles.label}>Glasses name</Text>
       <TextInput
         value={selected.name}
         onChangeText={(name) => patchSelected({ name })}
         style={styles.input}
-        placeholder="Profile name"
+        placeholder="Phone, Laptop, Office monitor…"
         placeholderTextColor={colors.muted}
       />
 
@@ -235,47 +338,10 @@ export default function SettingsScreen() {
           neutralColor={previewFg}
           style={styles.previewLine}
         />
-        <View style={styles.row}>
-          <View style={[styles.dot, { backgroundColor: eyeColor(anaglyphColors, "left") }]} />
-          <View style={[styles.dot, { backgroundColor: eyeColor(anaglyphColors, "right") }]} />
-        </View>
       </View>
 
       <Pressable style={styles.primaryButton} disabled={busy} onPress={() => void save()}>
-        <Text style={styles.primaryButtonText}>Save</Text>
-      </Pressable>
-
-      {!selected.isActive ? (
-        <Pressable
-          style={styles.secondaryButton}
-          disabled={busy}
-          onPress={() => {
-            void activateAnaglyphProfile(selected.id)
-              .then(() => Promise.all([load(), refresh()]))
-              .catch((err) => setError(messageFromError(err, "Could not activate.")));
-          }}
-        >
-          <Text style={styles.secondaryButtonText}>Set active</Text>
-        </Pressable>
-      ) : null}
-
-      <Pressable
-        style={styles.secondaryButton}
-        disabled={busy}
-        onPress={() => {
-          void createAnaglyphProfile({
-            name: `Screen ${profiles.length + 1}`,
-            leftHue: 0,
-            leftLightness: 50,
-            rightHue: 180,
-            rightLightness: 50,
-            background: "black",
-          })
-            .then(load)
-            .catch((err) => setError(messageFromError(err, "Could not create.")));
-        }}
-      >
-        <Text style={styles.secondaryButtonText}>Add profile</Text>
+        <Text style={styles.primaryButtonText}>Save changes</Text>
       </Pressable>
 
       {profiles.length > 1 ? (
@@ -297,19 +363,40 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
+  screenPad: { flex: 1, backgroundColor: colors.bg, padding: 20, gap: 12 },
   content: { padding: 20, gap: 12, paddingBottom: 40 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
-  subtitle: { color: colors.muted, marginBottom: 8 },
-  chips: { maxHeight: 44 },
-  chip: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginRight: 8,
+  subtitle: { color: colors.muted, marginBottom: 4 },
+  createBox: { gap: 10, padding: 12, borderRadius: 16, backgroundColor: "#1a1a1a" },
+  presetCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#1a1a1a",
+    paddingHorizontal: 14,
+    paddingVertical: 12,
   },
-  chipActive: { backgroundColor: colors.accent },
-  chipText: { color: colors.text, fontSize: 13, fontWeight: "600" },
+  presetCardActive: {
+    borderColor: colors.accent,
+    backgroundColor: "rgba(61,139,255,0.15)",
+  },
+  swatchPair: { flexDirection: "row", width: 44 },
+  dot: { width: 28, height: 28, borderRadius: 14, borderWidth: 2, borderColor: "#1a1a1a" },
+  dotOverlap: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2,
+    borderColor: "#1a1a1a",
+    marginLeft: -10,
+  },
+  presetCopy: { flex: 1, minWidth: 0 },
+  presetName: { color: colors.text, fontWeight: "700", fontSize: 15 },
+  presetMeta: { color: colors.muted, fontSize: 12, textTransform: "capitalize", marginTop: 2 },
+  presetStatus: { color: colors.mutedStrong, fontSize: 11, fontWeight: "600" },
   input: {
     borderWidth: 1,
     borderColor: colors.border,
@@ -334,13 +421,18 @@ const styles = StyleSheet.create({
   preview: { borderRadius: 16, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border },
   previewWord: { fontSize: 28, fontWeight: "700" },
   previewLine: { fontSize: 15, lineHeight: 22 },
-  dot: { width: 28, height: 28, borderRadius: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.25)" },
   primaryButton: {
     backgroundColor: colors.accent,
     borderRadius: 12,
     paddingVertical: 14,
     alignItems: "center",
     marginTop: 8,
+  },
+  primaryButtonInline: {
+    backgroundColor: colors.accent,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   primaryButtonText: { color: colors.text, fontWeight: "700" },
   secondaryButton: {
@@ -349,6 +441,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingVertical: 12,
     alignItems: "center",
+  },
+  secondaryButtonInline: {
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
   },
   secondaryButtonText: { color: colors.text, fontWeight: "600" },
   dangerButton: {
