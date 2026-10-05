@@ -27,12 +27,30 @@ type StudyCard = {
   intervals?: Record<ReviewRating, string>;
 };
 
+type RevealStep = "front" | "examples" | "answer";
+
+const STEP_PROGRESS: Record<RevealStep, number> = {
+  front: 0,
+  examples: 0.5,
+  answer: 1,
+};
+
 const RATINGS: { id: ReviewRating; label: string; className: string }[] = [
   { id: "again", label: "Again", className: "bg-[#5c3a32] text-[#f3c0b4]" },
   { id: "hard", label: "Hard", className: "bg-[#4d4a2c] text-[#e6e0a8]" },
   { id: "good", label: "Good", className: "bg-[#2f4a38] text-[#b7e0c2]" },
   { id: "easy", label: "Easy", className: "bg-[#2c3d5c] text-[#b7c8e8]" },
 ];
+
+function nextStep(step: RevealStep): RevealStep {
+  if (step === "front") {
+    return "examples";
+  }
+  if (step === "examples") {
+    return "answer";
+  }
+  return "answer";
+}
 
 export function StudySession({
   deckName,
@@ -43,7 +61,7 @@ export function StudySession({
 }) {
   const router = useRouter();
   const [queue, setQueue] = useState(initialCards);
-  const [revealed, setRevealed] = useState(false);
+  const [step, setStep] = useState<RevealStep>("front");
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [initialCount] = useState(initialCards.length);
@@ -92,7 +110,13 @@ export function StudySession({
 
   const head = card.irregularForms || card.word;
   const reviewed = initialCount - remainingCount;
-  const progress = ((reviewed + (revealed ? 1 : 0)) / Math.max(initialCount, 1)) * 100;
+  const progress = ((reviewed + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
+  const showExamples = step === "examples" || step === "answer";
+  const showAnswer = step === "answer";
+
+  function advanceReveal() {
+    setStep((current) => nextStep(current));
+  }
 
   async function rate(rating: ReviewRating) {
     setBusy(true);
@@ -110,7 +134,7 @@ export function StudySession({
     };
     const nextQueue = advanceStudyQueue(queue, updated);
     setQueue(nextQueue);
-    setRevealed(false);
+    setStep("front");
     setNow(Date.now());
 
     if (nextQueue.length === 0) {
@@ -136,7 +160,20 @@ export function StudySession({
         </div>
 
         <article
-          className="relative min-h-[320px] rounded-2xl border border-white/10 bg-[#2a241c]/80 p-8 shadow-2xl backdrop-blur-sm"
+          role={showAnswer ? undefined : "button"}
+          tabIndex={showAnswer ? undefined : 0}
+          onClick={showAnswer ? undefined : advanceReveal}
+          onKeyDown={
+            showAnswer
+              ? undefined
+              : (event) => {
+                  if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    advanceReveal();
+                  }
+                }
+          }
+          className="relative min-h-[320px] rounded-2xl border border-white/10 bg-[#2a241c]/80 p-8 shadow-2xl backdrop-blur-sm outline-none focus-visible:ring-2 focus-visible:ring-white/40"
           style={{ backgroundImage: "url(/app/card-parchment.jpg)", backgroundSize: "cover" }}
         >
           <div className="absolute inset-0 rounded-2xl bg-black/45" />
@@ -150,11 +187,13 @@ export function StudySession({
                 <p className="mt-2 text-white/70">{card.transcription}</p>
               </div>
               {card.audio.word ? (
-                <SpeakerButton flashcardId={card.id} kind="word" url={card.audio.word} generateOnPlay={false} />
+                <span onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                  <SpeakerButton flashcardId={card.id} kind="word" url={card.audio.word} generateOnPlay={false} />
+                </span>
               ) : null}
             </div>
 
-            {revealed ? (
+            {showExamples ? (
               <div className="mt-8 space-y-5">
                 <ol className="space-y-3 text-base leading-7 text-white/90">
                   {card.examples.map((example, exampleIndex) => {
@@ -166,26 +205,32 @@ export function StudySession({
                           {exampleIndex + 1}. {example}
                         </span>
                         {url ? (
-                          <SpeakerButton
-                            flashcardId={card.id}
-                            kind={kind}
-                            url={url}
-                            generateOnPlay={false}
-                          />
+                          <span onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
+                            <SpeakerButton
+                              flashcardId={card.id}
+                              kind={kind}
+                              url={url}
+                              generateOnPlay={false}
+                            />
+                          </span>
                         ) : null}
                       </li>
                     );
                   })}
                 </ol>
-                <hr className="border-white/15" />
-                <p className="text-white/90">{card.definition}</p>
+                {showAnswer ? (
+                  <>
+                    <hr className="border-white/15" />
+                    <p className="text-white/90">{card.definition}</p>
+                  </>
+                ) : null}
               </div>
             ) : null}
           </div>
         </article>
 
         <div className="mt-8 flex justify-center">
-          {revealed ? (
+          {showAnswer ? (
             <div className="grid w-full max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
               {RATINGS.map((rating) => (
                 <button
@@ -203,10 +248,10 @@ export function StudySession({
           ) : (
             <button
               type="button"
-              onClick={() => setRevealed(true)}
+              onClick={advanceReveal}
               className="rounded-xl bg-white px-10 py-3 text-sm font-semibold text-black"
             >
-              Tap to show answer
+              {step === "front" ? "Tap to show examples" : "Tap to show answer"}
             </button>
           )}
         </div>

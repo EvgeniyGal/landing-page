@@ -19,4 +19,4 @@ Unauthenticated visitors MUST be redirected to login. Role user MUST reach `/app
 ### Requirement: Study session
 #### Scenario: Reveal and rate
 - **WHEN** the user starts study on a deck with due cards
-- **THEN** they see the front, can tap to show the answer, and rating buttons apply SM-2
+- **THEN** they see the front (word, transcription, part of speech), can tap to show examples, then tap to show the answer, and rating buttons apply SM-2

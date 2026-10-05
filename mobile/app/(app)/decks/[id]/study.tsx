@@ -17,6 +17,14 @@ import { colors } from "@/src/theme";
 
 const EXAMPLE_KINDS: AudioKind[] = ["example_1", "example_2", "example_3"];
 
+type RevealStep = "front" | "examples" | "answer";
+
+const STEP_PROGRESS: Record<RevealStep, number> = {
+  front: 0,
+  examples: 0.5,
+  answer: 1,
+};
+
 const RATINGS: { id: ReviewRating; label: string; bg: string; text: string }[] = [
   { id: "again", label: "Again", bg: colors.again.bg, text: colors.again.text },
   { id: "hard", label: "Hard", bg: colors.hard.bg, text: colors.hard.text },
@@ -24,12 +32,22 @@ const RATINGS: { id: ReviewRating; label: string; bg: string; text: string }[] =
   { id: "easy", label: "Easy", bg: colors.easy.bg, text: colors.easy.text },
 ];
 
+function nextStep(step: RevealStep): RevealStep {
+  if (step === "front") {
+    return "examples";
+  }
+  if (step === "examples") {
+    return "answer";
+  }
+  return "answer";
+}
+
 export default function StudyScreen() {
   const { id: deckId } = useLocalSearchParams<{ id: string }>();
   const [deckName, setDeckName] = useState("");
   const [queue, setQueue] = useState<Flashcard[]>([]);
   const [initialCount, setInitialCount] = useState(0);
-  const [revealed, setRevealed] = useState(false);
+  const [step, setStep] = useState<RevealStep>("front");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -52,7 +70,7 @@ export default function StudyScreen() {
           setDeckName(result.deck.name);
           setQueue(result.cards);
           setInitialCount(result.cards.length);
-          setRevealed(false);
+          setStep("front");
           setNow(Date.now());
         } catch (err) {
           if (!cancelled) {
@@ -123,7 +141,13 @@ export default function StudyScreen() {
 
   const head = cardHead(card.word, card.irregularForms);
   const reviewed = initialCount - remainingCount;
-  const progress = ((reviewed + (revealed ? 1 : 0)) / Math.max(initialCount, 1)) * 100;
+  const progress = ((reviewed + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
+  const showExamples = step === "examples" || step === "answer";
+  const showAnswer = step === "answer";
+
+  function advanceReveal() {
+    setStep((current) => nextStep(current));
+  }
 
   async function rate(rating: ReviewRating) {
     setBusy(true);
@@ -140,7 +164,7 @@ export default function StudyScreen() {
       };
       const nextQueue = advanceStudyQueue(queue, updated);
       setQueue(nextQueue);
-      setRevealed(false);
+      setStep("front");
       setNow(Date.now());
       if (nextQueue.length === 0) {
         router.replace(`/(app)/decks/${deckId}`);
@@ -162,7 +186,11 @@ export default function StudyScreen() {
         <View style={[styles.progressFill, { width: `${Math.max(progress, 8)}%` }]} />
       </View>
 
-      <View style={styles.card}>
+      <Pressable
+        disabled={showAnswer}
+        onPress={advanceReveal}
+        style={({ pressed }) => [styles.card, !showAnswer && pressed && styles.pressed]}
+      >
         <View style={styles.headRow}>
           <View style={styles.flex}>
             <Text style={styles.head}>
@@ -174,7 +202,7 @@ export default function StudyScreen() {
           {card.audio.word ? <SpeakerButton url={card.audio.word} /> : null}
         </View>
 
-        {revealed ? (
+        {showExamples ? (
           <View style={styles.reveal}>
             {card.examples.map((example, exampleIndex) => {
               const kind = EXAMPLE_KINDS[exampleIndex];
@@ -191,16 +219,20 @@ export default function StudyScreen() {
                 </View>
               );
             })}
-            <View style={styles.divider} />
-            <Text style={styles.definition}>{card.definition}</Text>
+            {showAnswer ? (
+              <>
+                <View style={styles.divider} />
+                <Text style={styles.definition}>{card.definition}</Text>
+              </>
+            ) : null}
           </View>
         ) : null}
-      </View>
+      </Pressable>
 
       <ErrorText>{error}</ErrorText>
 
       <View style={styles.footer}>
-        {revealed ? (
+        {showAnswer ? (
           <View style={styles.ratings}>
             {RATINGS.map((rating) => (
               <Pressable
@@ -222,8 +254,10 @@ export default function StudyScreen() {
             ))}
           </View>
         ) : (
-          <Pressable style={styles.revealButton} onPress={() => setRevealed(true)}>
-            <Text style={styles.revealButtonText}>Tap to show answer</Text>
+          <Pressable style={styles.revealButton} onPress={advanceReveal}>
+            <Text style={styles.revealButtonText}>
+              {step === "front" ? "Tap to show examples" : "Tap to show answer"}
+            </Text>
           </Pressable>
         )}
       </View>
