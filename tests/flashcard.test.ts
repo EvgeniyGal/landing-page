@@ -4,6 +4,7 @@ import { generatedCardSchema } from "../lib/flashcard/schema";
 import { formatBackDefinition, formatFlashcardText } from "../lib/flashcard/format";
 import { isRestrictedVoiceError, isTtsConfigured } from "../lib/elevenlabs/tts";
 import { isPrivateStoreError } from "../lib/storage/blob";
+import { advanceStudyQueue, splitDueQueue } from "../lib/srs/queue";
 import { newCardSchedule, previewIntervals, scheduleReview } from "../lib/srs/sm2";
 import { parseTtsCallback, ttsCallbackData } from "../lib/telegram/parse";
 
@@ -84,6 +85,63 @@ test("previewIntervals returns labels for all ratings", () => {
   assert.ok(labels.hard);
   assert.ok(labels.good);
   assert.ok(labels.easy);
+});
+
+test("advanceStudyQueue reinserts learning cards by due time", () => {
+  const now = new Date("2026-01-01T00:00:00Z");
+  const learning = {
+    id: "a",
+    state: "learning" as const,
+    dueAt: new Date(now.getTime() + 60_000),
+  };
+  const other = {
+    id: "b",
+    state: "new" as const,
+    dueAt: now,
+  };
+  const next = advanceStudyQueue([learning, other], learning);
+  assert.deepEqual(
+    next.map((card) => card.id),
+    ["b", "a"],
+  );
+});
+
+test("advanceStudyQueue drops graduated review cards", () => {
+  const now = new Date("2026-01-01T00:00:00Z");
+  const reviewed = {
+    id: "a",
+    state: "review" as const,
+    dueAt: new Date(now.getTime() + 86_400_000),
+  };
+  const other = {
+    id: "b",
+    state: "new" as const,
+    dueAt: now,
+  };
+  const next = advanceStudyQueue([reviewed, other], reviewed);
+  assert.deepEqual(
+    next.map((card) => card.id),
+    ["b"],
+  );
+});
+
+test("splitDueQueue separates ready and waiting cards", () => {
+  const now = Date.parse("2026-01-01T00:01:00Z");
+  const { due, waiting } = splitDueQueue(
+    [
+      { id: "ready", dueAt: "2026-01-01T00:00:30Z" },
+      { id: "later", dueAt: "2026-01-01T00:02:00Z" },
+    ],
+    now,
+  );
+  assert.deepEqual(
+    due.map((card) => card.id),
+    ["ready"],
+  );
+  assert.deepEqual(
+    waiting.map((card) => card.id),
+    ["later"],
+  );
 });
 
 test("TTS callback round-trips a card id and kind", () => {

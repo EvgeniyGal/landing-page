@@ -142,7 +142,11 @@ export async function reviewCardAction(input: { flashcardId: string; rating: Rev
   if (!result.ok) {
     return { ok: false as const, error: "Card not found." };
   }
-  return { ok: true as const };
+  const card = serializeFlashcard(result.card, { intervals: true });
+  revalidatePath("/app");
+  revalidatePath(`/app/decks/${result.card.deckId}`);
+  revalidatePath(`/app/decks/${result.card.deckId}/study`);
+  return { ok: true as const, card };
 }
 
 export async function updateCardAction(input: {

@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router/react-navigation";
 import { getStudyQueue, reviewFlashcard } from "@/src/api/endpoints";
@@ -7,6 +7,12 @@ import type { AudioKind, Flashcard, ReviewRating } from "@/src/api/types";
 import { SpeakerButton } from "@/src/components/SpeakerButton";
 import { ErrorText, LoadingBlock } from "@/src/components/ui";
 import { cardHead, messageFromError } from "@/src/lib/format";
+import {
+  advanceStudyQueue,
+  dueTimestamp,
+  formatWaitLabel,
+  splitDueQueue,
+} from "@/src/lib/study-queue";
 import { colors } from "@/src/theme";
 
 const EXAMPLE_KINDS: AudioKind[] = ["example_1", "example_2", "example_3"];
@@ -21,12 +27,13 @@ const RATINGS: { id: ReviewRating; label: string; bg: string; text: string }[] =
 export default function StudyScreen() {
   const { id: deckId } = useLocalSearchParams<{ id: string }>();
   const [deckName, setDeckName] = useState("");
-  const [cards, setCards] = useState<Flashcard[]>([]);
-  const [index, setIndex] = useState(0);
+  const [queue, setQueue] = useState<Flashcard[]>([]);
+  const [initialCount, setInitialCount] = useState(0);
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
   useFocusEffect(
     useCallback(() => {
@@ -43,9 +50,10 @@ export default function StudyScreen() {
             return;
           }
           setDeckName(result.deck.name);
-          setCards(result.cards);
-          setIndex(0);
+          setQueue(result.cards);
+          setInitialCount(result.cards.length);
           setRevealed(false);
+          setNow(Date.now());
         } catch (err) {
           if (!cancelled) {
             setError(messageFromError(err, "Could not load study queue."));
@@ -63,14 +71,29 @@ export default function StudyScreen() {
     }, [deckId]),
   );
 
+  const { due, waiting } = splitDueQueue(queue, now);
+  const card = due[0];
+  const nextWaiting = waiting[0];
+  const remainingCount = queue.length;
+
+  useEffect(() => {
+    if (card || !nextWaiting) {
+      return;
+    }
+    const delay = Math.max(250, dueTimestamp(nextWaiting.dueAt) - Date.now());
+    const timer = setTimeout(() => setNow(Date.now()), delay);
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(tick);
+    };
+  }, [card, nextWaiting]);
+
   if (loading) {
     return <LoadingBlock label="Loading study session…" />;
   }
 
-  const card = cards[index];
-  const total = cards.length;
-
-  if (!card) {
+  if (!card && !nextWaiting) {
     return (
       <View style={styles.done}>
         <Text style={styles.doneTitle}>You are done for now</Text>
@@ -82,20 +105,46 @@ export default function StudyScreen() {
     );
   }
 
+  if (!card && nextWaiting) {
+    const waitMs = Math.max(0, dueTimestamp(nextWaiting.dueAt) - now);
+    return (
+      <View style={styles.done}>
+        <Text style={styles.doneTitle}>Next card in {formatWaitLabel(waitMs)}</Text>
+        <Text style={styles.doneSubtitle}>
+          Learning step for “{cardHead(nextWaiting.word, nextWaiting.irregularForms)}”
+        </Text>
+        <Text style={styles.waitingMeta}>
+          {remainingCount} card{remainingCount === 1 ? "" : "s"} left in this session
+        </Text>
+        <ErrorText>{error}</ErrorText>
+      </View>
+    );
+  }
+
   const head = cardHead(card.word, card.irregularForms);
-  const progress = ((index + (revealed ? 1 : 0)) / Math.max(total, 1)) * 100;
+  const reviewed = initialCount - remainingCount;
+  const progress = ((reviewed + (revealed ? 1 : 0)) / Math.max(initialCount, 1)) * 100;
 
   async function rate(rating: ReviewRating) {
     setBusy(true);
     setError(null);
     try {
-      await reviewFlashcard(card.id, rating);
-      if (index + 1 >= total) {
-        router.replace(`/(app)/decks/${deckId}`);
-        return;
-      }
-      setIndex((value) => value + 1);
+      const result = await reviewFlashcard(card.id, rating);
+      const updated: Flashcard = {
+        ...card,
+        state: result.card.state,
+        dueAt: result.card.dueAt,
+        ease: result.card.ease,
+        intervalDays: result.card.intervalDays,
+        intervals: result.card.intervals ?? card.intervals,
+      };
+      const nextQueue = advanceStudyQueue(queue, updated);
+      setQueue(nextQueue);
       setRevealed(false);
+      setNow(Date.now());
+      if (nextQueue.length === 0) {
+        router.replace(`/(app)/decks/${deckId}`);
+      }
     } catch (err) {
       setError(messageFromError(err, "Could not save review."));
     } finally {
@@ -107,9 +156,7 @@ export default function StudyScreen() {
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <View style={styles.topRow}>
         <Text style={styles.deckName}>{deckName}</Text>
-        <Text style={styles.counter}>
-          {index + 1}/{total}
-        </Text>
+        <Text style={styles.counter}>{remainingCount} left</Text>
       </View>
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: `${Math.max(progress, 8)}%` }]} />
@@ -321,6 +368,12 @@ const styles = StyleSheet.create({
   doneSubtitle: {
     color: colors.muted,
     fontSize: 15,
+    textAlign: "center",
+  },
+  waitingMeta: {
+    color: colors.mutedStrong,
+    fontSize: 13,
+    marginTop: 8,
   },
   doneButton: {
     marginTop: 16,

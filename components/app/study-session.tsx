@@ -1,10 +1,17 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { reviewCardAction } from "@/app/app/actions";
 import { SpeakerButton } from "@/components/app/speaker-button";
 import type { ReviewRating } from "@/lib/db/schema";
+import {
+  advanceStudyQueue,
+  dueTimestamp,
+  formatWaitLabel,
+  splitDueQueue,
+} from "@/lib/srs/queue";
+import type { CardState } from "@/lib/srs/sm2";
 
 type StudyCard = {
   id: string;
@@ -14,6 +21,8 @@ type StudyCard = {
   irregularForms: string | null;
   examples: string[];
   definition: string | null;
+  state: CardState;
+  dueAt: string;
   audio: Record<string, string>;
   intervals?: Record<ReviewRating, string>;
 };
@@ -27,19 +36,37 @@ const RATINGS: { id: ReviewRating; label: string; className: string }[] = [
 
 export function StudySession({
   deckName,
-  cards,
+  cards: initialCards,
 }: {
   deckName: string;
   cards: StudyCard[];
 }) {
   const router = useRouter();
-  const [index, setIndex] = useState(0);
+  const [queue, setQueue] = useState(initialCards);
   const [revealed, setRevealed] = useState(false);
   const [busy, setBusy] = useState(false);
-  const card = cards[index];
-  const total = cards.length;
+  const [now, setNow] = useState(() => Date.now());
+  const [initialCount] = useState(initialCards.length);
 
-  if (!card) {
+  const { due, waiting } = splitDueQueue(queue, now);
+  const card = due[0];
+  const nextWaiting = waiting[0];
+  const remainingCount = queue.length;
+
+  useEffect(() => {
+    if (card || !nextWaiting) {
+      return;
+    }
+    const delay = Math.max(250, dueTimestamp(nextWaiting.dueAt) - Date.now());
+    const timer = window.setTimeout(() => setNow(Date.now()), delay);
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => {
+      window.clearTimeout(timer);
+      window.clearInterval(tick);
+    };
+  }, [card, nextWaiting]);
+
+  if (!card && !nextWaiting) {
     return (
       <div className="flex min-h-[70dvh] flex-col items-center justify-center px-4 text-center">
         <p className="text-xl font-medium">You are done for now</p>
@@ -48,20 +75,48 @@ export function StudySession({
     );
   }
 
+  if (!card && nextWaiting) {
+    const waitMs = Math.max(0, dueTimestamp(nextWaiting.dueAt) - now);
+    return (
+      <div className="flex min-h-[70dvh] flex-col items-center justify-center px-4 text-center">
+        <p className="text-xl font-medium">Next card in {formatWaitLabel(waitMs)}</p>
+        <p className="mt-2 text-white/50">
+          Learning step for “{nextWaiting.irregularForms || nextWaiting.word}”
+        </p>
+        <p className="mt-6 text-sm text-white/40">
+          {remainingCount} card{remainingCount === 1 ? "" : "s"} left in this session
+        </p>
+      </div>
+    );
+  }
+
   const head = card.irregularForms || card.word;
-  const progress = ((index + (revealed ? 1 : 0)) / total) * 100;
+  const reviewed = initialCount - remainingCount;
+  const progress = ((reviewed + (revealed ? 1 : 0)) / Math.max(initialCount, 1)) * 100;
 
   async function rate(rating: ReviewRating) {
     setBusy(true);
-    await reviewCardAction({ flashcardId: card.id, rating });
+    const result = await reviewCardAction({ flashcardId: card.id, rating });
     setBusy(false);
-    if (index + 1 >= total) {
-      router.push("/app");
-      router.refresh();
+    if (!result.ok) {
       return;
     }
-    setIndex((value) => value + 1);
+
+    const updated: StudyCard = {
+      ...card,
+      state: result.card.state,
+      dueAt: result.card.dueAt,
+      intervals: result.card.intervals,
+    };
+    const nextQueue = advanceStudyQueue(queue, updated);
+    setQueue(nextQueue);
     setRevealed(false);
+    setNow(Date.now());
+
+    if (nextQueue.length === 0) {
+      router.push("/app");
+      router.refresh();
+    }
   }
 
   return (
@@ -73,7 +128,7 @@ export function StudySession({
         <div className="mb-4 flex items-center justify-between gap-4">
           <p className="text-lg font-medium">{deckName}</p>
           <p className="text-sm text-white/55">
-            {index + 1}/{total}
+            {remainingCount} left
           </p>
         </div>
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-black/40">

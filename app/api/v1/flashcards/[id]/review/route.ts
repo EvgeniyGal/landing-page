@@ -30,5 +30,5 @@ export async function POST(
   if (!result.ok) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ card: serializeFlashcard(result.card) });
+  return NextResponse.json({ card: serializeFlashcard(result.card, { intervals: true }) });
 }
