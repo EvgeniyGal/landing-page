@@ -1,14 +1,20 @@
 {
-    "build": {
-      "preview": {
-        "android": {
-          "buildType": "apk"
-        }
+  "build": {
+    "preview": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://aiautomations.work"
       },
-      "production": {
-        "android": {
-          "buildType": "app-bundle"
-        }
+      "android": {
+        "buildType": "apk"
+      }
+    },
+    "production": {
+      "env": {
+        "EXPO_PUBLIC_API_URL": "https://aiautomations.work"
+      },
+      "android": {
+        "buildType": "app-bundle"
       }
     }
   }
+}

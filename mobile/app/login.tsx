@@ -1,5 +1,5 @@
 import { Redirect, router } from "expo-router";
-import { useState } from "react";
+import { useCallback, useState } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -9,17 +9,40 @@ import {
   View,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
+import { useGoogleSignIn } from "@/src/auth/google-sign-in";
 import { useAuth } from "@/src/auth/session";
-import { ErrorText, Field, LoadingBlock, PrimaryButton, Title } from "@/src/components/ui";
+import { ErrorText, Field, LoadingBlock, PrimaryButton, SecondaryButton, Title } from "@/src/components/ui";
 import { messageFromError } from "@/src/lib/format";
 import { colors } from "@/src/theme";
 
 export default function LoginScreen() {
-  const { user, loading, login } = useAuth();
+  const { user, loading, login, loginWithGoogle } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const onGoogleToken = useCallback(
+    async (idToken: string) => {
+      setError(null);
+      setSubmitting(true);
+      try {
+        await loginWithGoogle(idToken);
+        router.replace("/(app)");
+      } catch (err) {
+        setError(messageFromError(err, "Google sign-in failed."));
+      } finally {
+        setSubmitting(false);
+      }
+    },
+    [loginWithGoogle],
+  );
+
+  const onGoogleError = useCallback((message: string) => {
+    setError(message);
+  }, []);
+
+  const google = useGoogleSignIn(onGoogleToken, onGoogleError);
 
   if (loading) {
     return <LoadingBlock />;
@@ -46,9 +69,16 @@ export default function LoginScreen() {
     <SafeAreaView style={styles.safe}>
       <KeyboardAvoidingView
         style={styles.flex}
-        behavior={Platform.OS === "ios" ? "padding" : undefined}
+        behavior={Platform.OS === "ios" ? "padding" : "height"}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 8 : 0}
       >
-        <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+        <ScrollView
+          style={styles.flex}
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          automaticallyAdjustKeyboardInsets
+          showsVerticalScrollIndicator={false}
+        >
           <View style={styles.brand}>
             <Text style={styles.logo}>Flashcards</Text>
             <Title>Sign in</Title>
@@ -78,6 +108,14 @@ export default function LoginScreen() {
               disabled={!email.trim() || !password}
               onPress={() => void onSubmit()}
             />
+            {google.enabled ? (
+              <SecondaryButton
+                label="Continue with Google"
+                loading={submitting}
+                disabled={!google.ready || submitting}
+                onPress={() => void google.promptAsync()}
+              />
+            ) : null}
           </View>
         </ScrollView>
       </KeyboardAvoidingView>
@@ -95,8 +133,10 @@ const styles = StyleSheet.create({
   },
   content: {
     flexGrow: 1,
-    justifyContent: "center",
-    padding: 24,
+    justifyContent: "flex-start",
+    paddingHorizontal: 24,
+    paddingTop: 32,
+    paddingBottom: 48,
     gap: 28,
   },
   brand: {

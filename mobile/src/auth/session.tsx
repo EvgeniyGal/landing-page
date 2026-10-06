@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { ApiError } from "@/src/api/types";
-import { getMe, login as loginRequest } from "@/src/api/endpoints";
+import { getMe, login as loginRequest, loginWithGoogle as loginWithGoogleRequest } from "@/src/api/endpoints";
 import { setAuthToken, setUnauthorizedHandler } from "@/src/api/client";
 import type { User } from "@/src/api/types";
 
@@ -20,6 +20,7 @@ type AuthContextValue = {
   token: string | null;
   loading: boolean;
   login: (email: string, password: string) => Promise<void>;
+  loginWithGoogle: (idToken: string) => Promise<void>;
   logout: () => Promise<void>;
   refreshMe: () => Promise<void>;
 };
@@ -114,13 +115,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await writeStoredToken(result.accessToken);
   }, []);
 
+  const loginWithGoogle = useCallback(async (idToken: string) => {
+    const result = await loginWithGoogleRequest(idToken);
+    setAuthToken(result.accessToken);
+    setToken(result.accessToken);
+    setUser(result.user);
+    await writeStoredToken(result.accessToken);
+  }, []);
+
   const logout = useCallback(async () => {
     await clearSession();
   }, [clearSession]);
 
   const value = useMemo(
-    () => ({ user, token, loading, login, logout, refreshMe }),
-    [user, token, loading, login, logout, refreshMe],
+    () => ({ user, token, loading, login, loginWithGoogle, logout, refreshMe }),
+    [user, token, loading, login, loginWithGoogle, logout, refreshMe],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

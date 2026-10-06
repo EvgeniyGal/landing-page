@@ -20,6 +20,14 @@ export async function login(email: string, password: string) {
   });
 }
 
+export async function loginWithGoogle(idToken: string) {
+  return apiRequest<{ accessToken: string; user: User }>("/api/v1/auth/google", {
+    method: "POST",
+    body: { idToken },
+    auth: false,
+  });
+}
+
 export async function getMe() {
   return apiRequest<{ user: User }>("/api/v1/me");
 }

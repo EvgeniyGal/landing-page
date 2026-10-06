@@ -1,6 +1,7 @@
 import { ApiError, type ApiErrorBody } from "./types";
 
-const DEFAULT_API_URL = "http://localhost:3000";
+const PRODUCTION_API_URL = "https://aiautomations.work";
+const DEFAULT_API_URL = __DEV__ ? "http://localhost:3000" : PRODUCTION_API_URL;
 
 let authToken: string | null = null;
 let onUnauthorized: (() => void) | null = null;

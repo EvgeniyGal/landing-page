@@ -77,7 +77,17 @@ export async function verifyGoogleIdToken(idToken: string) {
   if (!payload.email || !payload.sub) {
     throw new GoogleAuthError("Invalid Google token.", "invalid_token");
   }
-  if (clientId && payload.aud && payload.aud !== clientId) {
+  const allowedAudiences = [
+    process.env.AUTH_GOOGLE_ID,
+    process.env.AUTH_GOOGLE_ANDROID_CLIENT_ID,
+    process.env.AUTH_GOOGLE_IOS_CLIENT_ID,
+  ].filter((value): value is string => Boolean(value?.trim()));
+
+  if (
+    allowedAudiences.length > 0 &&
+    payload.aud &&
+    !allowedAudiences.includes(payload.aud)
+  ) {
     throw new GoogleAuthError("Invalid Google token.", "invalid_token");
   }
   if (payload.email_verified === "false") {
