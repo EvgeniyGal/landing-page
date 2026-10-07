@@ -31,7 +31,9 @@ export function SettingsTabs({ profiles }: { profiles: LazyEyeProfile[] }) {
     <div className="mx-auto max-w-5xl space-y-8 px-4 py-8">
       <div>
         <h1 className="text-3xl font-semibold">Settings</h1>
-        <p className="mt-1 text-sm text-white/50">Study text and glasses for this device.</p>
+        <p className="mt-1 text-sm text-white/50">
+          Text size and active glasses are remembered on this device.
+        </p>
       </div>
 
       <div className="flex w-fit items-center rounded-full bg-white/8 p-1 text-sm font-semibold">

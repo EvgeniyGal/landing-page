@@ -1,9 +1,9 @@
-import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View, Pressable } from "react-native";
 import { useLazyEye } from "@/src/anaglyph/LazyEyeContext";
 import {
   TEXT_SCALE_LABELS,
   TEXT_SCALE_STEPS,
+  type StudyMode,
   type StudyTextScales,
   type TextScaleStep,
 } from "@/src/lib/text-scale";
@@ -33,70 +33,83 @@ const TEXT_SCALE_ROWS: {
   },
 ];
 
-export default function TextSizeSettingsScreen() {
-  const {
-    wordTextScale,
-    exampleTextScale,
-    explanationTextScale,
-    setStudyTextScales,
-  } = useLazyEye();
-  const [busy, setBusy] = useState(false);
-  const scales: StudyTextScales = {
-    wordTextScale,
-    exampleTextScale,
-    explanationTextScale,
-  };
+const MODE_SECTIONS: { mode: StudyMode; title: string; hint: string }[] = [
+  {
+    mode: "regular",
+    title: "Regular",
+    hint: "Used when Regular mode is selected on this device.",
+  },
+  {
+    mode: "lazyEye",
+    title: "Lazy eye",
+    hint: "Used when Lazy eye mode is selected on this device.",
+  },
+];
 
-  async function choose(key: keyof StudyTextScales, step: TextScaleStep) {
-    if (scales[key] === step || busy) {
+export default function TextSizeSettingsScreen() {
+  const { textScalePrefs, setStudyTextScales, lazyEyeEnabled } = useLazyEye();
+
+  function choose(mode: StudyMode, key: keyof StudyTextScales, step: TextScaleStep) {
+    if (textScalePrefs[mode][key] === step) {
       return;
     }
-    setBusy(true);
-    try {
-      await setStudyTextScales({ [key]: step });
-    } finally {
-      setBusy(false);
-    }
+    void setStudyTextScales({ [key]: step }, mode);
   }
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
       <Text style={styles.title}>Text size</Text>
       <Text style={styles.subtitle}>
-        Scale study card text. Useful for lazy-eye training and readability.
+        Saved on this device only. Configure Regular and Lazy eye independently.
       </Text>
-      {TEXT_SCALE_ROWS.map((row) => {
-        const scale = scales[row.key];
+
+      {MODE_SECTIONS.map((section) => {
+        const scales = textScalePrefs[section.mode];
+        const isCurrent = (section.mode === "lazyEye") === lazyEyeEnabled;
         return (
-          <View key={row.key} style={styles.textScaleRow}>
-            <Text style={styles.label}>{row.label}</Text>
-            <View style={styles.row}>
-              {TEXT_SCALE_STEPS.map((step) => {
-                const active = scale === step;
-                return (
-                  <Pressable
-                    key={step}
-                    disabled={busy}
-                    onPress={() => void choose(row.key, step)}
-                    style={[styles.scaleChip, active && styles.scaleChipActive]}
-                  >
-                    <Text style={[styles.scaleChipText, active && styles.scaleChipTextActive]}>
-                      {TEXT_SCALE_LABELS[step]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
+          <View key={section.mode} style={styles.section}>
+            <View style={styles.sectionHeader}>
+              <View style={styles.flex}>
+                <Text style={styles.sectionTitle}>{section.title}</Text>
+                <Text style={styles.sectionHint}>{section.hint}</Text>
+              </View>
+              {isCurrent ? <Text style={styles.inUse}>In use</Text> : null}
             </View>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: row.baseSize * scale,
-                lineHeight: row.baseLineHeight * scale,
-                marginTop: 4,
-              }}
-            >
-              {row.preview}
-            </Text>
+
+            {TEXT_SCALE_ROWS.map((row) => {
+              const scale = scales[row.key];
+              return (
+                <View key={row.key} style={styles.textScaleRow}>
+                  <Text style={styles.label}>{row.label}</Text>
+                  <View style={styles.row}>
+                    {TEXT_SCALE_STEPS.map((step) => {
+                      const active = scale === step;
+                      return (
+                        <Pressable
+                          key={step}
+                          onPress={() => choose(section.mode, row.key, step)}
+                          style={[styles.scaleChip, active && styles.scaleChipActive]}
+                        >
+                          <Text style={[styles.scaleChipText, active && styles.scaleChipTextActive]}>
+                            {TEXT_SCALE_LABELS[step]}
+                          </Text>
+                        </Pressable>
+                      );
+                    })}
+                  </View>
+                  <Text
+                    style={{
+                      color: colors.text,
+                      fontSize: row.baseSize * scale,
+                      lineHeight: row.baseLineHeight * scale,
+                      marginTop: 4,
+                    }}
+                  >
+                    {row.preview}
+                  </Text>
+                </View>
+              );
+            })}
           </View>
         );
       })}
@@ -109,6 +122,28 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 16, paddingBottom: 40 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   subtitle: { color: colors.muted, marginBottom: 4 },
+  section: {
+    gap: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    backgroundColor: "#1a1a1a",
+    padding: 14,
+  },
+  sectionHeader: { flexDirection: "row", alignItems: "flex-start", gap: 8 },
+  flex: { flex: 1, minWidth: 0, gap: 4 },
+  sectionTitle: { color: colors.text, fontSize: 16, fontWeight: "700" },
+  sectionHint: { color: colors.muted, fontSize: 12 },
+  inUse: {
+    color: "#7eb6ff",
+    fontSize: 11,
+    fontWeight: "700",
+    backgroundColor: "rgba(61,139,255,0.2)",
+    overflow: "hidden",
+    borderRadius: 999,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
   textScaleRow: { gap: 8 },
   label: { color: colors.mutedStrong, fontSize: 12, textTransform: "uppercase" },
   row: { flexDirection: "row", flexWrap: "wrap", gap: 8 },

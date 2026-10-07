@@ -21,8 +21,15 @@ import {
   writeActiveAnaglyphProfileId,
 } from "@/src/lib/device-profile";
 import {
-  DEFAULT_TEXT_SCALE,
-  serializeStudyTextScales,
+  patchDeviceTextScalePrefs,
+  readDeviceTextScalePrefs,
+  writeDeviceTextScalePrefs,
+} from "@/src/lib/device-text-scale";
+import {
+  DEFAULT_DEVICE_TEXT_SCALE_PREFS,
+  modeFromLazyEye,
+  type DeviceTextScalePrefs,
+  type StudyMode,
   type StudyTextScales,
 } from "@/src/lib/text-scale";
 
@@ -30,25 +37,23 @@ type LazyEyeContextValue = StudyTextScales & {
   lazyEyeEnabled: boolean;
   activeProfile: AnaglyphProfile | null;
   profiles: AnaglyphProfile[];
+  textScalePrefs: DeviceTextScalePrefs;
   loading: boolean;
   setLazyEyeEnabled: (enabled: boolean) => Promise<void>;
-  setStudyTextScales: (patch: Partial<StudyTextScales>) => Promise<void>;
+  setStudyTextScales: (patch: Partial<StudyTextScales>, mode?: StudyMode) => Promise<void>;
   activateProfile: (profileId: string) => Promise<void>;
   refresh: () => Promise<void>;
 };
 
 const LazyEyeContext = createContext<LazyEyeContextValue | null>(null);
 
-const DEFAULT_SCALES: StudyTextScales = {
-  wordTextScale: DEFAULT_TEXT_SCALE,
-  exampleTextScale: DEFAULT_TEXT_SCALE,
-  explanationTextScale: DEFAULT_TEXT_SCALE,
-};
-
 export function LazyEyeProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const [lazyEyeEnabled, setEnabled] = useState(false);
-  const [scales, setScales] = useState<StudyTextScales>(DEFAULT_SCALES);
+  const [textScalePrefs, setTextScalePrefs] = useState<DeviceTextScalePrefs>(() => ({
+    regular: { ...DEFAULT_DEVICE_TEXT_SCALE_PREFS.regular },
+    lazyEye: { ...DEFAULT_DEVICE_TEXT_SCALE_PREFS.lazyEye },
+  }));
   const [profiles, setProfiles] = useState<AnaglyphProfile[]>([]);
   const [localActiveId, setLocalActiveId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
@@ -56,19 +61,23 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
   const refresh = useCallback(async () => {
     if (!user) {
       setEnabled(false);
-      setScales(DEFAULT_SCALES);
+      setTextScalePrefs({
+        regular: { ...DEFAULT_DEVICE_TEXT_SCALE_PREFS.regular },
+        lazyEye: { ...DEFAULT_DEVICE_TEXT_SCALE_PREFS.lazyEye },
+      });
       setProfiles([]);
       setLocalActiveId(null);
       setLoading(false);
       return;
     }
-    const [preferences, listed, storedId] = await Promise.all([
+    const [preferences, listed, storedId, storedScales] = await Promise.all([
       getPreferences(),
       listAnaglyphProfiles(),
       readActiveAnaglyphProfileId(),
+      readDeviceTextScalePrefs(),
     ]);
     setEnabled(preferences.preferences.lazyEyeEnabled);
-    setScales(serializeStudyTextScales(preferences.preferences));
+    setTextScalePrefs(storedScales);
     setProfiles(listed.profiles);
     const resolved = resolveActiveProfileId(listed.profiles, storedId);
     setLocalActiveId(resolved);
@@ -86,7 +95,10 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
       } catch {
         if (!cancelled) {
           setEnabled(false);
-          setScales(DEFAULT_SCALES);
+          setTextScalePrefs({
+            regular: { ...DEFAULT_DEVICE_TEXT_SCALE_PREFS.regular },
+            lazyEye: { ...DEFAULT_DEVICE_TEXT_SCALE_PREFS.lazyEye },
+          });
           setProfiles([]);
           setLocalActiveId(null);
         }
@@ -107,11 +119,17 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
     await setPreferences({ lazyEyeEnabled: enabled });
   }, []);
 
-  const setStudyTextScales = useCallback(async (patch: Partial<StudyTextScales>) => {
-    setScales((current) => ({ ...current, ...patch }));
-    const result = await setPreferences(patch);
-    setScales(serializeStudyTextScales(result.preferences));
-  }, []);
+  const setStudyTextScales = useCallback(
+    async (patch: Partial<StudyTextScales>, mode?: StudyMode) => {
+      const targetMode = mode ?? modeFromLazyEye(lazyEyeEnabled);
+      setTextScalePrefs((current) => {
+        const next = patchDeviceTextScalePrefs(current, targetMode, patch);
+        void writeDeviceTextScalePrefs(next);
+        return next;
+      });
+    },
+    [lazyEyeEnabled],
+  );
 
   const activateProfile = useCallback(async (profileId: string) => {
     setLocalActiveId(profileId);
@@ -125,13 +143,15 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
   );
   const activeProfile =
     localProfiles.find((profile) => profile.id === activeId) ?? localProfiles[0] ?? null;
+  const activeScales = textScalePrefs[modeFromLazyEye(lazyEyeEnabled)];
 
   const value = useMemo(
     () => ({
       lazyEyeEnabled,
-      wordTextScale: scales.wordTextScale,
-      exampleTextScale: scales.exampleTextScale,
-      explanationTextScale: scales.explanationTextScale,
+      wordTextScale: activeScales.wordTextScale,
+      exampleTextScale: activeScales.exampleTextScale,
+      explanationTextScale: activeScales.explanationTextScale,
+      textScalePrefs,
       activeProfile,
       profiles: localProfiles,
       loading,
@@ -142,7 +162,8 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
     }),
     [
       lazyEyeEnabled,
-      scales,
+      activeScales,
+      textScalePrefs,
       activeProfile,
       localProfiles,
       loading,

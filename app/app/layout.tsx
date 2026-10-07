@@ -27,9 +27,6 @@ export default async function LearnerLayout({ children }: { children: React.Reac
       email={session.user.email ?? ""}
       role={session.user.role}
       lazyEyeEnabled={context.lazyEyeEnabled}
-      wordTextScale={context.wordTextScale}
-      exampleTextScale={context.exampleTextScale}
-      explanationTextScale={context.explanationTextScale}
       activeProfile={activeProfile}
       profiles={profiles}
     >
