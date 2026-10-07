@@ -1,7 +1,7 @@
+import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { GlassProfilesSettings } from "@/components/app/glass-profiles-settings";
-import { StudyTextScaleSettings } from "@/components/app/study-text-scale-settings";
+import { SettingsTabs } from "@/components/app/settings-tabs";
 import { ensureDefaultAnaglyphProfile, serializeAnaglyphProfile } from "@/lib/anaglyph/profiles";
 
 export default async function SettingsPage() {
@@ -11,11 +11,15 @@ export default async function SettingsPage() {
   }
 
   const profiles = await ensureDefaultAnaglyphProfile(session.user.id);
+  const serialized = profiles.map(serializeAnaglyphProfile);
 
   return (
-    <div className="mx-auto max-w-5xl space-y-10 px-4 py-8">
-      <StudyTextScaleSettings />
-      <GlassProfilesSettings profiles={profiles.map(serializeAnaglyphProfile)} />
-    </div>
+    <Suspense
+      fallback={
+        <div className="mx-auto max-w-5xl px-4 py-8 text-white/50">Loading settings…</div>
+      }
+    >
+      <SettingsTabs profiles={serialized} />
+    </Suspense>
   );
 }

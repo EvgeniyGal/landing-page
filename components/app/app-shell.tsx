@@ -117,7 +117,6 @@ function GlassesPicker() {
                 type="button"
                 role="option"
                 aria-selected={profile.isActive}
-                disabled={pending}
                 onClick={() => {
                   activateProfile(profile.id);
                   setOpen(false);
@@ -142,7 +141,7 @@ function GlassesPicker() {
             );
           })}
           <Link
-            href="/app/settings"
+            href="/app/settings?tab=glasses"
             className="block border-t border-white/10 px-3 py-2 text-sm text-white/70 hover:bg-white/8"
             onClick={() => setOpen(false)}
           >
@@ -191,7 +190,7 @@ function ProfileMenu({ email }: { email: string }) {
             className="block px-3 py-2 text-sm text-white/85 hover:bg-white/8"
             onClick={() => setOpen(false)}
           >
-            Glasses settings
+            Settings
           </Link>
           <form action={logoutAction}>
             <button

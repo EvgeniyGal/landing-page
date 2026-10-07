@@ -36,7 +36,7 @@ function GlassesChip() {
   }
   return (
     <Pressable
-      onPress={() => router.push("/(app)/settings")}
+      onPress={() => router.push("/(app)/settings/glasses")}
       style={styles.glassesChip}
       hitSlop={6}
     >
@@ -88,7 +88,9 @@ function AppStack() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "Home" }} />
-      <Stack.Screen name="settings" options={{ title: "Settings" }} />
+      <Stack.Screen name="settings/index" options={{ title: "Settings" }} />
+      <Stack.Screen name="settings/text-size" options={{ title: "Text size" }} />
+      <Stack.Screen name="settings/glasses" options={{ title: "Glasses" }} />
       <Stack.Screen name="decks/[id]/index" options={{ title: "Dictionary" }} />
       <Stack.Screen name="decks/[id]/add" options={{ title: "Add card" }} />
       <Stack.Screen name="decks/[id]/study" options={{ title: "Study", headerRight: () => <ModeToggle /> }} />

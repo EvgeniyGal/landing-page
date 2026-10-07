@@ -3,14 +3,13 @@
 import { useMemo, useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import {
-  activateAnaglyphProfileAction,
   createAnaglyphProfileAction,
   deleteAnaglyphProfileAction,
   updateAnaglyphProfileAction,
 } from "@/app/app/actions";
 import { AnaglyphColorPicker } from "@/components/app/anaglyph-color-picker";
 import { DichopticText } from "@/components/app/dichoptic-text";
-import type { LazyEyeProfile } from "@/components/app/lazy-eye-provider";
+import { useLazyEye, type LazyEyeProfile } from "@/components/app/lazy-eye-provider";
 import {
   backgroundCss,
   eyeColor,
@@ -23,9 +22,18 @@ import { Input } from "@/components/ui/input";
 
 export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles: LazyEyeProfile[] }) {
   const router = useRouter();
-  const [profiles, setProfiles] = useState(initialProfiles);
+  const { activateProfile, activeProfile } = useLazyEye();
+  const [profiles, setProfiles] = useState(() =>
+    initialProfiles.map((profile) => ({
+      ...profile,
+      isActive: activeProfile ? profile.id === activeProfile.id : profile.isActive,
+    })),
+  );
   const [selectedId, setSelectedId] = useState(
-    initialProfiles.find((profile) => profile.isActive)?.id ?? initialProfiles[0]?.id ?? "",
+    activeProfile?.id ??
+      initialProfiles.find((profile) => profile.isActive)?.id ??
+      initialProfiles[0]?.id ??
+      "",
   );
   const [eye, setEye] = useState<EyeSide>("left");
   const [error, setError] = useState<string | null>(null);
@@ -59,22 +67,11 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
 
   function choosePreset(profileId: string) {
     setSelectedId(profileId);
-    const alreadyActive = profiles.find((profile) => profile.id === profileId)?.isActive;
-    if (alreadyActive) {
-      return;
-    }
     setError(null);
-    startTransition(async () => {
-      const result = await activateAnaglyphProfileAction(profileId);
-      if (!result.ok) {
-        setError(result.error);
-        return;
-      }
-      setProfiles((current) =>
-        current.map((profile) => ({ ...profile, isActive: profile.id === profileId })),
-      );
-      router.refresh();
-    });
+    activateProfile(profileId);
+    setProfiles((current) =>
+      current.map((profile) => ({ ...profile, isActive: profile.id === profileId })),
+    );
   }
 
   function saveSelected() {
@@ -129,11 +126,7 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
         setError(result.error);
         return;
       }
-      const activate = await activateAnaglyphProfileAction(result.profile.id);
-      if (!activate.ok) {
-        setError(activate.error);
-        return;
-      }
+      activateProfile(result.profile.id);
       setProfiles((current) => [
         ...current.map((profile) => ({ ...profile, isActive: false })),
         { ...result.profile, isActive: true },
@@ -157,9 +150,23 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
         setError(result.error);
         return;
       }
-      const next = profiles.filter((profile) => profile.id !== profileId);
+      const wasActive = profiles.find((profile) => profile.id === profileId)?.isActive;
+      const next = profiles
+        .filter((profile) => profile.id !== profileId)
+        .map((profile) => ({ ...profile, isActive: false }));
+      const nextActiveId = wasActive
+        ? (next[0]?.id ?? "")
+        : (activeProfile?.id && activeProfile.id !== profileId
+            ? activeProfile.id
+            : (next[0]?.id ?? ""));
+      if (nextActiveId) {
+        activateProfile(nextActiveId);
+        next.forEach((profile) => {
+          profile.isActive = profile.id === nextActiveId;
+        });
+      }
       setProfiles(next);
-      setSelectedId(next.find((profile) => profile.isActive)?.id ?? next[0]?.id ?? "");
+      setSelectedId(nextActiveId || next[0]?.id || "");
       router.refresh();
     });
   }
@@ -190,9 +197,9 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-semibold">Glasses</h1>
+          <h2 className="text-2xl font-semibold">Glasses</h2>
           <p className="mt-1 text-sm text-white/50">
-            Name each pair for a screen, then tap a preset to use it.
+            Presets sync across devices; which pair is in use is remembered on this device.
           </p>
         </div>
         <Button

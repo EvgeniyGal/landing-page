@@ -9,7 +9,6 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router/react-navigation";
 import {
-  activateAnaglyphProfile,
   createAnaglyphProfile,
   deleteAnaglyphProfile,
   listAnaglyphProfiles,
@@ -28,113 +27,13 @@ import {
   type EyeSide,
 } from "@/src/lib/anaglyph/color";
 import { messageFromError } from "@/src/lib/format";
-import {
-  TEXT_SCALE_LABELS,
-  TEXT_SCALE_STEPS,
-  type StudyTextScales,
-  type TextScaleStep,
-} from "@/src/lib/text-scale";
+import { withLocalActiveFlag } from "@/src/lib/device-profile";
 import { colors } from "@/src/theme";
 
 const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue) => hslToCss(hue, 50));
 
-const TEXT_SCALE_ROWS: {
-  key: keyof StudyTextScales;
-  label: string;
-  preview: string;
-  baseSize: number;
-  baseLineHeight: number;
-}[] = [
-  { key: "wordTextScale", label: "Word", preview: "apple", baseSize: 28, baseLineHeight: 34 },
-  {
-    key: "exampleTextScale",
-    label: "Example",
-    preview: "I ate an apple.",
-    baseSize: 15,
-    baseLineHeight: 22,
-  },
-  {
-    key: "explanationTextScale",
-    label: "Explanation",
-    preview: "A round fruit that grows on trees.",
-    baseSize: 15,
-    baseLineHeight: 22,
-  },
-];
-
-function TextScaleSection() {
-  const {
-    wordTextScale,
-    exampleTextScale,
-    explanationTextScale,
-    setStudyTextScales,
-  } = useLazyEye();
-  const [busy, setBusy] = useState(false);
-  const scales: StudyTextScales = {
-    wordTextScale,
-    exampleTextScale,
-    explanationTextScale,
-  };
-
-  async function choose(key: keyof StudyTextScales, step: TextScaleStep) {
-    if (scales[key] === step || busy) {
-      return;
-    }
-    setBusy(true);
-    try {
-      await setStudyTextScales({ [key]: step });
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  return (
-    <View style={styles.textScaleSection}>
-      <Text style={styles.title}>Text size</Text>
-      <Text style={styles.subtitle}>
-        Scale study card text. Useful for lazy-eye training and readability.
-      </Text>
-      {TEXT_SCALE_ROWS.map((row) => {
-        const scale = scales[row.key];
-        return (
-          <View key={row.key} style={styles.textScaleRow}>
-            <Text style={styles.label}>{row.label}</Text>
-            <View style={styles.row}>
-              {TEXT_SCALE_STEPS.map((step) => {
-                const active = scale === step;
-                return (
-                  <Pressable
-                    key={step}
-                    disabled={busy}
-                    onPress={() => void choose(row.key, step)}
-                    style={[styles.scaleChip, active && styles.scaleChipActive]}
-                  >
-                    <Text style={[styles.scaleChipText, active && styles.scaleChipTextActive]}>
-                      {TEXT_SCALE_LABELS[step]}
-                    </Text>
-                  </Pressable>
-                );
-              })}
-            </View>
-            <Text
-              style={{
-                color: colors.text,
-                fontSize: row.baseSize * scale,
-                lineHeight: row.baseLineHeight * scale,
-                marginTop: 4,
-              }}
-            >
-              {row.preview}
-            </Text>
-          </View>
-        );
-      })}
-    </View>
-  );
-}
-
-export default function SettingsScreen() {
-  const { refresh } = useLazyEye();
+export default function GlassesSettingsScreen() {
+  const { refresh, activateProfile, activeProfile } = useLazyEye();
   const [profiles, setProfiles] = useState<AnaglyphProfile[]>([]);
   const [selectedId, setSelectedId] = useState("");
   const [eye, setEye] = useState<EyeSide>("left");
@@ -149,14 +48,18 @@ export default function SettingsScreen() {
     setError(null);
     try {
       const result = await listAnaglyphProfiles();
-      setProfiles(result.profiles);
-      setSelectedId(result.profiles.find((p) => p.isActive)?.id ?? result.profiles[0]?.id ?? "");
+      const activeId = activeProfile?.id;
+      const localized = withLocalActiveFlag(result.profiles, activeId ?? null);
+      setProfiles(localized);
+      setSelectedId(
+        localized.find((p) => p.isActive)?.id ?? localized[0]?.id ?? "",
+      );
     } catch (err) {
       setError(messageFromError(err, "Could not load glasses."));
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [activeProfile?.id]);
 
   useFocusEffect(
     useCallback(() => {
@@ -189,22 +92,9 @@ export default function SettingsScreen() {
 
   async function choosePreset(profileId: string) {
     setSelectedId(profileId);
-    if (profiles.find((profile) => profile.id === profileId)?.isActive) {
-      return;
-    }
-    setBusy(true);
     setError(null);
-    try {
-      await activateAnaglyphProfile(profileId);
-      setProfiles((current) =>
-        current.map((profile) => ({ ...profile, isActive: profile.id === profileId })),
-      );
-      await refresh();
-    } catch (err) {
-      setError(messageFromError(err, "Could not switch glasses."));
-    } finally {
-      setBusy(false);
-    }
+    await activateProfile(profileId);
+    setProfiles((current) => withLocalActiveFlag(current, profileId));
   }
 
   async function save() {
@@ -251,7 +141,7 @@ export default function SettingsScreen() {
         rightLightness: selected?.rightLightness ?? 50,
         background: selected?.background ?? "black",
       });
-      await activateAnaglyphProfile(created.profile.id);
+      await activateProfile(created.profile.id);
       setCreating(false);
       setNewName("");
       await Promise.all([load(), refresh()]);
@@ -269,7 +159,6 @@ export default function SettingsScreen() {
   if (!selected || !anaglyphColors) {
     return (
       <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-        <TextScaleSection />
         <Text style={styles.title}>Glasses</Text>
         <ErrorText>{error}</ErrorText>
         <TextInput
@@ -294,9 +183,10 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
-      <TextScaleSection />
       <Text style={styles.title}>Glasses</Text>
-      <Text style={styles.subtitle}>Name each pair for a screen, then tap a preset to use it.</Text>
+      <Text style={styles.subtitle}>
+        Presets sync across devices; which pair is in use is remembered on this device.
+      </Text>
       <ErrorText>{error}</ErrorText>
 
       <Pressable
@@ -453,9 +343,20 @@ export default function SettingsScreen() {
           style={styles.dangerButton}
           disabled={busy}
           onPress={() => {
-            void deleteAnaglyphProfile(selected.id)
-              .then(() => Promise.all([load(), refresh()]))
-              .catch((err) => setError(messageFromError(err, "Could not delete.")));
+            void (async () => {
+              try {
+                const deletedId = selected.id;
+                await deleteAnaglyphProfile(deletedId);
+                const remaining = profiles.filter((profile) => profile.id !== deletedId);
+                const nextId = remaining[0]?.id;
+                if (nextId) {
+                  await activateProfile(nextId);
+                }
+                await Promise.all([load(), refresh()]);
+              } catch (err) {
+                setError(messageFromError(err, "Could not delete."));
+              }
+            })();
           }}
         >
           <Text style={styles.dangerButtonText}>Delete</Text>
@@ -467,21 +368,9 @@ export default function SettingsScreen() {
 
 const styles = StyleSheet.create({
   screen: { flex: 1, backgroundColor: colors.bg },
-  screenPad: { flex: 1, backgroundColor: colors.bg, padding: 20, gap: 12 },
   content: { padding: 20, gap: 12, paddingBottom: 40 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   subtitle: { color: colors.muted, marginBottom: 4 },
-  textScaleSection: { gap: 12, marginBottom: 8 },
-  textScaleRow: { gap: 8 },
-  scaleChip: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 999,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-  },
-  scaleChipActive: { backgroundColor: "#fff" },
-  scaleChipText: { color: colors.text, fontWeight: "600", fontSize: 12 },
-  scaleChipTextActive: { color: "#111" },
   createBox: { gap: 10, padding: 12, borderRadius: 16, backgroundColor: "#1a1a1a" },
   presetCard: {
     flexDirection: "row",
