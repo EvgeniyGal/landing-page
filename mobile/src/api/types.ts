@@ -73,6 +73,16 @@ export type AnaglyphProfile = {
 
 export type UserPreferences = {
   lazyEyeEnabled: boolean;
+  wordTextScale: number;
+  exampleTextScale: number;
+  explanationTextScale: number;
+};
+
+export type PreferencesPatch = {
+  lazyEyeEnabled?: boolean;
+  wordTextScale?: number;
+  exampleTextScale?: number;
+  explanationTextScale?: number;
 };
 
 export type ApiErrorBody = {

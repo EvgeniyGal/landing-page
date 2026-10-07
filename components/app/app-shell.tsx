@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { LogoYg } from "@/components/landing/logo-yg";
 import { logoutAction } from "@/app/login/actions";
 import { LazyEyeProvider, useLazyEye, type LazyEyeProfile } from "@/components/app/lazy-eye-provider";
+import type { TextScaleStep } from "@/lib/study/text-scale";
 import { eyeColor } from "@/lib/anaglyph/color";
 
 function ModeToggle() {
@@ -249,6 +250,9 @@ export function AppShell({
   email,
   role,
   lazyEyeEnabled,
+  wordTextScale,
+  exampleTextScale,
+  explanationTextScale,
   activeProfile,
   profiles,
   children,
@@ -256,6 +260,9 @@ export function AppShell({
   email: string;
   role?: "admin" | "user";
   lazyEyeEnabled: boolean;
+  wordTextScale: TextScaleStep;
+  exampleTextScale: TextScaleStep;
+  explanationTextScale: TextScaleStep;
   activeProfile: LazyEyeProfile | null;
   profiles: LazyEyeProfile[];
   children: React.ReactNode;
@@ -263,6 +270,9 @@ export function AppShell({
   return (
     <LazyEyeProvider
       lazyEyeEnabled={lazyEyeEnabled}
+      wordTextScale={wordTextScale}
+      exampleTextScale={exampleTextScale}
+      explanationTextScale={explanationTextScale}
       activeProfile={activeProfile}
       profiles={profiles}
     >

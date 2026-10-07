@@ -12,9 +12,12 @@ import {
   createAnaglyphProfile,
   deleteAnaglyphProfile,
   serializeAnaglyphProfile,
+  serializePreferences,
   setLazyEyeEnabled,
   updateAnaglyphProfile,
+  updatePreferences,
   type AnaglyphProfileInput,
+  type PreferencesPatch,
 } from "@/lib/anaglyph/profiles";
 import { reviewCard } from "@/lib/srs/review";
 import type { ReviewRating } from "@/lib/db/schema";
@@ -234,6 +237,22 @@ export async function setLazyEyeEnabledAction(lazyEyeEnabled: boolean) {
   revalidatePath("/app");
   revalidatePath("/app/settings");
   return { ok: true as const, lazyEyeEnabled: preferences.lazyEyeEnabled };
+}
+
+export async function setPreferencesAction(patch: PreferencesPatch) {
+  const user = await requireLearner();
+  const hasPatch =
+    patch.lazyEyeEnabled !== undefined ||
+    patch.wordTextScale !== undefined ||
+    patch.exampleTextScale !== undefined ||
+    patch.explanationTextScale !== undefined;
+  if (!hasPatch) {
+    return { ok: false as const, error: "At least one preference is required." };
+  }
+  const preferences = await updatePreferences(user.id, patch);
+  revalidatePath("/app");
+  revalidatePath("/app/settings");
+  return { ok: true as const, preferences: serializePreferences(preferences) };
 }
 
 export async function createAnaglyphProfileAction(input: AnaglyphProfileInput) {

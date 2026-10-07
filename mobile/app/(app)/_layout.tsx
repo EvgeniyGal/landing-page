@@ -88,7 +88,7 @@ function AppStack() {
       }}
     >
       <Stack.Screen name="index" options={{ title: "Home" }} />
-      <Stack.Screen name="settings" options={{ title: "Glasses" }} />
+      <Stack.Screen name="settings" options={{ title: "Settings" }} />
       <Stack.Screen name="decks/[id]/index" options={{ title: "Dictionary" }} />
       <Stack.Screen name="decks/[id]/add" options={{ title: "Add card" }} />
       <Stack.Screen name="decks/[id]/study" options={{ title: "Study", headerRight: () => <ModeToggle /> }} />

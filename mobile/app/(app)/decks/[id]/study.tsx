@@ -48,7 +48,13 @@ function nextStep(step: RevealStep): RevealStep {
 
 export default function StudyScreen() {
   const { id: deckId } = useLocalSearchParams<{ id: string }>();
-  const { lazyEyeEnabled, activeProfile } = useLazyEye();
+  const {
+    lazyEyeEnabled,
+    activeProfile,
+    wordTextScale,
+    exampleTextScale,
+    explanationTextScale,
+  } = useLazyEye();
   const [deckName, setDeckName] = useState("");
   const [queue, setQueue] = useState<Flashcard[]>([]);
   const [initialCount, setInitialCount] = useState(0);
@@ -162,6 +168,17 @@ export default function StudyScreen() {
   const showExamples = step === "examples" || step === "answer";
   const showAnswer = step === "answer";
   const titleText = `${head}${card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}`;
+  const headStyle = { ...styles.head, fontSize: 28 * wordTextScale };
+  const exampleStyle = {
+    ...styles.exampleText,
+    fontSize: 15 * exampleTextScale,
+    lineHeight: 22 * exampleTextScale,
+  };
+  const definitionStyle = {
+    ...styles.definition,
+    fontSize: 15 * explanationTextScale,
+    lineHeight: 22 * explanationTextScale,
+  };
 
   function advanceReveal() {
     setStep((current) => nextStep(current));
@@ -224,10 +241,10 @@ export default function StudyScreen() {
                 colors={anaglyphColors}
                 mode="letters"
                 neutralColor={surfaceFg}
-                style={styles.head}
+                style={headStyle}
               />
             ) : (
-              <Text style={styles.head}>{titleText}</Text>
+              <Text style={headStyle}>{titleText}</Text>
             )}
             {anaglyphColors && card.transcription ? (
               <DichopticText
@@ -260,10 +277,10 @@ export default function StudyScreen() {
                       colors={anaglyphColors}
                       mode="syllables"
                       neutralColor={surfaceFg}
-                      style={styles.exampleText}
+                      style={exampleStyle}
                     />
                   ) : (
-                    <Text style={styles.exampleText}>
+                    <Text style={exampleStyle}>
                       {exampleIndex + 1}. {example}
                     </Text>
                   )}
@@ -280,10 +297,10 @@ export default function StudyScreen() {
                     colors={anaglyphColors}
                     mode="syllables"
                     neutralColor={surfaceFg}
-                    style={styles.definition}
+                    style={definitionStyle}
                   />
                 ) : (
-                  <Text style={styles.definition}>{card.definition}</Text>
+                  <Text style={definitionStyle}>{card.definition}</Text>
                 )}
               </>
             ) : null}

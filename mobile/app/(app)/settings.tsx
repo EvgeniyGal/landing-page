@@ -28,9 +28,110 @@ import {
   type EyeSide,
 } from "@/src/lib/anaglyph/color";
 import { messageFromError } from "@/src/lib/format";
+import {
+  TEXT_SCALE_LABELS,
+  TEXT_SCALE_STEPS,
+  type StudyTextScales,
+  type TextScaleStep,
+} from "@/src/lib/text-scale";
 import { colors } from "@/src/theme";
 
 const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue) => hslToCss(hue, 50));
+
+const TEXT_SCALE_ROWS: {
+  key: keyof StudyTextScales;
+  label: string;
+  preview: string;
+  baseSize: number;
+  baseLineHeight: number;
+}[] = [
+  { key: "wordTextScale", label: "Word", preview: "apple", baseSize: 28, baseLineHeight: 34 },
+  {
+    key: "exampleTextScale",
+    label: "Example",
+    preview: "I ate an apple.",
+    baseSize: 15,
+    baseLineHeight: 22,
+  },
+  {
+    key: "explanationTextScale",
+    label: "Explanation",
+    preview: "A round fruit that grows on trees.",
+    baseSize: 15,
+    baseLineHeight: 22,
+  },
+];
+
+function TextScaleSection() {
+  const {
+    wordTextScale,
+    exampleTextScale,
+    explanationTextScale,
+    setStudyTextScales,
+  } = useLazyEye();
+  const [busy, setBusy] = useState(false);
+  const scales: StudyTextScales = {
+    wordTextScale,
+    exampleTextScale,
+    explanationTextScale,
+  };
+
+  async function choose(key: keyof StudyTextScales, step: TextScaleStep) {
+    if (scales[key] === step || busy) {
+      return;
+    }
+    setBusy(true);
+    try {
+      await setStudyTextScales({ [key]: step });
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <View style={styles.textScaleSection}>
+      <Text style={styles.title}>Text size</Text>
+      <Text style={styles.subtitle}>
+        Scale study card text. Useful for lazy-eye training and readability.
+      </Text>
+      {TEXT_SCALE_ROWS.map((row) => {
+        const scale = scales[row.key];
+        return (
+          <View key={row.key} style={styles.textScaleRow}>
+            <Text style={styles.label}>{row.label}</Text>
+            <View style={styles.row}>
+              {TEXT_SCALE_STEPS.map((step) => {
+                const active = scale === step;
+                return (
+                  <Pressable
+                    key={step}
+                    disabled={busy}
+                    onPress={() => void choose(row.key, step)}
+                    style={[styles.scaleChip, active && styles.scaleChipActive]}
+                  >
+                    <Text style={[styles.scaleChipText, active && styles.scaleChipTextActive]}>
+                      {TEXT_SCALE_LABELS[step]}
+                    </Text>
+                  </Pressable>
+                );
+              })}
+            </View>
+            <Text
+              style={{
+                color: colors.text,
+                fontSize: row.baseSize * scale,
+                lineHeight: row.baseLineHeight * scale,
+                marginTop: 4,
+              }}
+            >
+              {row.preview}
+            </Text>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function SettingsScreen() {
   const { refresh } = useLazyEye();
@@ -167,7 +268,9 @@ export default function SettingsScreen() {
 
   if (!selected || !anaglyphColors) {
     return (
-      <View style={styles.screenPad}>
+      <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+        <TextScaleSection />
+        <Text style={styles.title}>Glasses</Text>
         <ErrorText>{error}</ErrorText>
         <TextInput
           value={newName}
@@ -179,7 +282,7 @@ export default function SettingsScreen() {
         <Pressable style={styles.primaryButton} onPress={() => void createNamed()}>
           <Text style={styles.primaryButtonText}>Save glasses</Text>
         </Pressable>
-      </View>
+      </ScrollView>
     );
   }
 
@@ -191,6 +294,7 @@ export default function SettingsScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content}>
+      <TextScaleSection />
       <Text style={styles.title}>Glasses</Text>
       <Text style={styles.subtitle}>Name each pair for a screen, then tap a preset to use it.</Text>
       <ErrorText>{error}</ErrorText>
@@ -367,6 +471,17 @@ const styles = StyleSheet.create({
   content: { padding: 20, gap: 12, paddingBottom: 40 },
   title: { color: colors.text, fontSize: 28, fontWeight: "700" },
   subtitle: { color: colors.muted, marginBottom: 4 },
+  textScaleSection: { gap: 12, marginBottom: 8 },
+  textScaleRow: { gap: 8 },
+  scaleChip: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+    borderRadius: 999,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+  },
+  scaleChipActive: { backgroundColor: "#fff" },
+  scaleChipText: { color: colors.text, fontWeight: "600", fontSize: 12 },
+  scaleChipTextActive: { color: "#111" },
   createBox: { gap: 10, padding: 12, borderRadius: 16, backgroundColor: "#1a1a1a" },
   presetCard: {
     flexDirection: "row",

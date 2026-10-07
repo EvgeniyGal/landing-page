@@ -7,6 +7,7 @@ import type {
   DeckSummary,
   Flashcard,
   FlashcardWrite,
+  PreferencesPatch,
   ReviewRating,
   User,
   UserPreferences,
@@ -109,10 +110,10 @@ export async function getPreferences() {
   return apiRequest<{ preferences: UserPreferences }>("/api/v1/me/preferences");
 }
 
-export async function setPreferences(lazyEyeEnabled: boolean) {
+export async function setPreferences(patch: PreferencesPatch) {
   return apiRequest<{ preferences: UserPreferences }>("/api/v1/me/preferences", {
     method: "PATCH",
-    body: { lazyEyeEnabled },
+    body: patch,
   });
 }
 

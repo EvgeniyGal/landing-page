@@ -7,6 +7,11 @@ import {
   type AnaglyphProfile,
 } from "@/lib/db/schema";
 import { clampHue, clampLightness } from "@/lib/anaglyph/color";
+import {
+  serializeStudyTextScales,
+  type StudyTextScales,
+  type TextScaleStep,
+} from "@/lib/study/text-scale";
 
 export type AnaglyphProfileInput = {
   name: string;
@@ -62,15 +67,38 @@ export async function getOrCreatePreferences(userId: string) {
   return created!;
 }
 
-export async function setLazyEyeEnabled(userId: string, lazyEyeEnabled: boolean) {
+export type PreferencesPatch = {
+  lazyEyeEnabled?: boolean;
+  wordTextScale?: TextScaleStep;
+  exampleTextScale?: TextScaleStep;
+  explanationTextScale?: TextScaleStep;
+};
+
+export function serializePreferences(prefs: {
+  lazyEyeEnabled: boolean;
+  wordTextScale: number;
+  exampleTextScale: number;
+  explanationTextScale: number;
+}) {
+  return {
+    lazyEyeEnabled: prefs.lazyEyeEnabled,
+    ...serializeStudyTextScales(prefs),
+  };
+}
+
+export async function updatePreferences(userId: string, patch: PreferencesPatch) {
   const db = getDb();
   await getOrCreatePreferences(userId);
   const [updated] = await db
     .update(userPreferences)
-    .set({ lazyEyeEnabled, updatedAt: new Date() })
+    .set({ ...patch, updatedAt: new Date() })
     .where(eq(userPreferences.userId, userId))
     .returning();
   return updated!;
+}
+
+export async function setLazyEyeEnabled(userId: string, lazyEyeEnabled: boolean) {
+  return updatePreferences(userId, { lazyEyeEnabled });
 }
 
 export async function listAnaglyphProfiles(userId: string) {
@@ -216,9 +244,13 @@ export async function getLazyEyeStudyContext(userId: string) {
   const preferences = await getOrCreatePreferences(userId);
   const profiles = await ensureDefaultAnaglyphProfile(userId);
   const active = profiles.find((profile) => profile.isActive) ?? profiles[0] ?? null;
+  const scales = serializeStudyTextScales(preferences);
   return {
     lazyEyeEnabled: preferences.lazyEyeEnabled,
+    ...scales,
     activeProfile: active,
     profiles,
   };
 }
+
+export type { StudyTextScales };

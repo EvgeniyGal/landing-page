@@ -67,7 +67,13 @@ export function StudySession({
   cards: StudyCard[];
 }) {
   const router = useRouter();
-  const { lazyEyeEnabled, activeProfile } = useLazyEye();
+  const {
+    lazyEyeEnabled,
+    activeProfile,
+    wordTextScale,
+    exampleTextScale,
+    explanationTextScale,
+  } = useLazyEye();
   const [queue, setQueue] = useState(initialCards);
   const [step, setStep] = useState<RevealStep>("front");
   const [busy, setBusy] = useState(false);
@@ -213,7 +219,10 @@ export function StudySession({
           <div className="relative">
             <div className="flex items-start justify-between gap-3">
               <div>
-                <p className="text-3xl font-semibold">
+                <p
+                  className="font-semibold"
+                  style={{ fontSize: 30 * wordTextScale, lineHeight: `${Math.round(36 * wordTextScale)}px` }}
+                >
                   {colors ? (
                     <DichopticText
                       text={titleText}
@@ -247,7 +256,13 @@ export function StudySession({
 
             {showExamples ? (
               <div className="mt-8 space-y-5">
-                <ol className={`space-y-3 text-base leading-7 ${dichoptic ? "" : "text-white/90"}`}>
+                <ol
+                  className={`space-y-3 ${dichoptic ? "" : "text-white/90"}`}
+                  style={{
+                    fontSize: 16 * exampleTextScale,
+                    lineHeight: `${Math.round(28 * exampleTextScale)}px`,
+                  }}
+                >
                   {card.examples.map((example, exampleIndex) => {
                     const kind = `example_${exampleIndex + 1}` as "example_1" | "example_2" | "example_3";
                     const url = card.audio[kind];
@@ -283,7 +298,13 @@ export function StudySession({
                 {showAnswer ? (
                   <>
                     <hr className="border-white/15" />
-                    <p className={dichoptic ? undefined : "text-white/90"}>
+                    <p
+                      className={dichoptic ? undefined : "text-white/90"}
+                      style={{
+                        fontSize: 16 * explanationTextScale,
+                        lineHeight: `${Math.round(28 * explanationTextScale)}px`,
+                      }}
+                    >
                       {colors && card.definition ? (
                         <DichopticText
                           text={card.definition}

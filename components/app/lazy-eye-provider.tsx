@@ -2,8 +2,17 @@
 
 import { createContext, useContext, useMemo, useOptimistic, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { activateAnaglyphProfileAction, setLazyEyeEnabledAction } from "@/app/app/actions";
+import {
+  activateAnaglyphProfileAction,
+  setLazyEyeEnabledAction,
+  setPreferencesAction,
+} from "@/app/app/actions";
 import type { AnaglyphBackground } from "@/lib/db/schema";
+import {
+  DEFAULT_TEXT_SCALE,
+  type StudyTextScales,
+  type TextScaleStep,
+} from "@/lib/study/text-scale";
 
 export type LazyEyeProfile = {
   id: string;
@@ -16,11 +25,12 @@ export type LazyEyeProfile = {
   background: AnaglyphBackground;
 };
 
-type LazyEyeContextValue = {
+type LazyEyeContextValue = StudyTextScales & {
   lazyEyeEnabled: boolean;
   activeProfile: LazyEyeProfile | null;
   profiles: LazyEyeProfile[];
   setLazyEyeEnabled: (enabled: boolean) => void;
+  setStudyTextScales: (patch: Partial<StudyTextScales>) => void;
   activateProfile: (profileId: string) => void;
   pending: boolean;
 };
@@ -29,11 +39,17 @@ const LazyEyeContext = createContext<LazyEyeContextValue | null>(null);
 
 export function LazyEyeProvider({
   lazyEyeEnabled,
+  wordTextScale = DEFAULT_TEXT_SCALE,
+  exampleTextScale = DEFAULT_TEXT_SCALE,
+  explanationTextScale = DEFAULT_TEXT_SCALE,
   activeProfile,
   profiles,
   children,
 }: {
   lazyEyeEnabled: boolean;
+  wordTextScale?: TextScaleStep;
+  exampleTextScale?: TextScaleStep;
+  explanationTextScale?: TextScaleStep;
   activeProfile: LazyEyeProfile | null;
   profiles: LazyEyeProfile[];
   children: React.ReactNode;
@@ -41,6 +57,10 @@ export function LazyEyeProvider({
   const router = useRouter();
   const [pending, startTransition] = useTransition();
   const [optimisticEnabled, setOptimisticEnabled] = useOptimistic(lazyEyeEnabled);
+  const [optimisticScales, setOptimisticScales] = useOptimistic(
+    { wordTextScale, exampleTextScale, explanationTextScale },
+    (current, patch: Partial<StudyTextScales>) => ({ ...current, ...patch }),
+  );
   const [optimisticProfiles, setActiveProfileId] = useOptimistic(
     profiles,
     (current, profileId: string) =>
@@ -53,6 +73,9 @@ export function LazyEyeProvider({
   const value = useMemo<LazyEyeContextValue>(
     () => ({
       lazyEyeEnabled: optimisticEnabled,
+      wordTextScale: optimisticScales.wordTextScale,
+      exampleTextScale: optimisticScales.exampleTextScale,
+      explanationTextScale: optimisticScales.explanationTextScale,
       activeProfile: optimisticActive,
       profiles: optimisticProfiles,
       pending,
@@ -60,6 +83,13 @@ export function LazyEyeProvider({
         startTransition(async () => {
           setOptimisticEnabled(enabled);
           await setLazyEyeEnabledAction(enabled);
+          router.refresh();
+        });
+      },
+      setStudyTextScales: (patch: Partial<StudyTextScales>) => {
+        startTransition(async () => {
+          setOptimisticScales(patch);
+          await setPreferencesAction(patch);
           router.refresh();
         });
       },
@@ -73,11 +103,13 @@ export function LazyEyeProvider({
     }),
     [
       optimisticEnabled,
+      optimisticScales,
       optimisticActive,
       optimisticProfiles,
       pending,
       router,
       setOptimisticEnabled,
+      setOptimisticScales,
       setActiveProfileId,
     ],
   );
@@ -92,3 +124,4 @@ export function useLazyEye() {
   }
   return value;
 }
+

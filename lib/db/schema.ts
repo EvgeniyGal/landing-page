@@ -177,6 +177,9 @@ export const userPreferences = pgTable("user_preferences", {
     .primaryKey()
     .references(() => users.id, { onDelete: "cascade" }),
   lazyEyeEnabled: boolean("lazy_eye_enabled").notNull().default(false),
+  wordTextScale: real("word_text_scale").notNull().default(1),
+  exampleTextScale: real("example_text_scale").notNull().default(1),
+  explanationTextScale: real("explanation_text_scale").notNull().default(1),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
