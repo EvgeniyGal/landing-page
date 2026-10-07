@@ -7,6 +7,7 @@ import { deleteCardAction } from "@/app/app/actions";
 import { ConfirmDialog } from "@/components/app/confirm-dialog";
 import { SpeakerButton } from "@/components/app/speaker-button";
 import { Button } from "@/components/ui/button";
+import { formatDueLabel } from "@/lib/srs/queue";
 
 export type DeckCardItem = {
   id: string;
@@ -16,6 +17,7 @@ export type DeckCardItem = {
   irregularForms: string | null;
   examples: string[];
   definition: string;
+  dueAt: string;
   stateLabel: string;
   stateClassName: string;
   audioWordUrl?: string;
@@ -67,7 +69,12 @@ export function DeckCardList({ deckId, cards }: { deckId: string; cards: DeckCar
                   <p className="truncate font-medium">{card.irregularForms || card.word}</p>
                   <p className="truncate text-sm text-white/45">{card.definition}</p>
                 </div>
-                <span className={`rounded-full px-2.5 py-1 text-xs ${card.stateClassName}`}>{card.stateLabel}</span>
+                <div className="flex shrink-0 flex-col items-end gap-1">
+                  <span className={`rounded-full px-2.5 py-1 text-xs ${card.stateClassName}`}>
+                    {card.stateLabel}
+                  </span>
+                  <span className="text-[11px] text-white/40">{formatDueLabel(card.dueAt)}</span>
+                </div>
               </Link>
               {card.audioWordUrl ? (
                 <SpeakerButton

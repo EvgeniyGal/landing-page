@@ -44,6 +44,7 @@ export default async function DeckPage({ params }: { params: Promise<{ id: strin
       definition: payload
         ? formatBackDefinition(payload.definition, payload.partOfSpeech)
         : card.outputText.slice(0, 80),
+      dueAt: card.dueAt.toISOString(),
       stateLabel: status.label,
       stateClassName: status.className,
       audioWordUrl: audio.word,

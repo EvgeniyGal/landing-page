@@ -46,3 +46,30 @@ export function formatWaitLabel(ms: number): string {
   const minutes = Math.ceil(seconds / 60);
   return `${minutes}m`;
 }
+
+const DAY_MS = 86_400_000;
+
+/** Relative next-appearance label for deck lists (learning minutes + review days). */
+export function formatDueLabel(dueAt: Date | string, now = Date.now()): string {
+  const ms = dueTimestamp(dueAt) - now;
+  if (ms <= 0) {
+    return "Due now";
+  }
+  if (ms < 60_000) {
+    return "in <1m";
+  }
+  if (ms < DAY_MS) {
+    const minutes = Math.round(ms / 60_000);
+    if (minutes < 60) {
+      return `in ${minutes}m`;
+    }
+    const hours = Math.round(minutes / 60);
+    return `in ${hours}h`;
+  }
+  const days = ms / DAY_MS;
+  if (days < 10) {
+    const rounded = Number(days.toFixed(1));
+    return `in ${rounded}d`;
+  }
+  return `in ${Math.round(days)}d`;
+}

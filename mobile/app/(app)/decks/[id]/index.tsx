@@ -20,6 +20,7 @@ import {
   SecondaryButton,
 } from "@/src/components/ui";
 import { cardHead, messageFromError, stateMeta } from "@/src/lib/format";
+import { formatDueLabel } from "@/src/lib/study-queue";
 import { colors } from "@/src/theme";
 
 export default function DeckDetailScreen() {
@@ -144,8 +145,11 @@ export default function DeckDetailScreen() {
                     {item.definition}
                   </Text>
                 </View>
-                <View style={[styles.badge, { backgroundColor: state.bg }]}>
-                  <Text style={[styles.badgeText, { color: state.text }]}>{state.label}</Text>
+                <View style={styles.metaCol}>
+                  <View style={[styles.badge, { backgroundColor: state.bg }]}>
+                    <Text style={[styles.badgeText, { color: state.text }]}>{state.label}</Text>
+                  </View>
+                  <Text style={styles.dueLabel}>{formatDueLabel(item.dueAt)}</Text>
                 </View>
               </Pressable>
               {item.audio.word ? <SpeakerButton url={item.audio.word} /> : null}
@@ -257,6 +261,10 @@ const styles = StyleSheet.create({
     fontSize: 13,
     marginTop: 4,
   },
+  metaCol: {
+    alignItems: "flex-end",
+    gap: 4,
+  },
   badge: {
     borderRadius: 999,
     paddingHorizontal: 10,
@@ -265,6 +273,10 @@ const styles = StyleSheet.create({
   badgeText: {
     fontSize: 11,
     fontWeight: "600",
+  },
+  dueLabel: {
+    color: colors.muted,
+    fontSize: 11,
   },
   deleteBtn: {
     width: 36,
