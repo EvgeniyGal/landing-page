@@ -53,9 +53,9 @@ export const SRS_FIELDS: {
   {
     key: "srsHardInterval",
     label: "Hard interval",
-    help: "Multiplier for Hard in review. Values below 1 shorten the current interval (unlike Anki’s 1.2). 1 keeps the same length.",
+    help: "Multiplier for Hard in review. Below 1 shortens the current interval; 1 keeps it; above 1 lengthens it (up to 1.5).",
     min: 0.5,
-    max: 1,
+    max: 1.5,
     step: 0.05,
     example: (v) => `Example: a 10-day Hard becomes ~${Math.max(1, 10 * v).toFixed(1)}d with factor ${v}.`,
   },
@@ -73,6 +73,6 @@ export function normalizeSrsPrefs(prefs: Partial<SrsPrefs>): SrsPrefs {
     srsIntervalModifier: clamp(prefs.srsIntervalModifier ?? DEFAULT_SRS_PREFS.srsIntervalModifier, 0.5, 2),
     srsStartingEase: clamp(prefs.srsStartingEase ?? DEFAULT_SRS_PREFS.srsStartingEase, 1.3, 3),
     srsEasyBonus: clamp(prefs.srsEasyBonus ?? DEFAULT_SRS_PREFS.srsEasyBonus, 1, 2),
-    srsHardInterval: clamp(prefs.srsHardInterval ?? DEFAULT_SRS_PREFS.srsHardInterval, 0.5, 1),
+    srsHardInterval: clamp(prefs.srsHardInterval ?? DEFAULT_SRS_PREFS.srsHardInterval, 0.5, 1.5),
   };
 }

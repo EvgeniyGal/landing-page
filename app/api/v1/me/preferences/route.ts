@@ -20,7 +20,7 @@ const patchSchema = z
     srsIntervalModifier: z.number().min(0.5).max(2).optional(),
     srsStartingEase: z.number().min(1.3).max(3).optional(),
     srsEasyBonus: z.number().min(1).max(2).optional(),
-    srsHardInterval: z.number().min(0.5).max(1).optional(),
+    srsHardInterval: z.number().min(0.5).max(1.5).optional(),
   })
   .refine(
     (value) =>
