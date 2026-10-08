@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { StudySession } from "@/components/app/study-session";
 import { serializeFlashcard } from "@/lib/api/serialize";
 import { getDueCards } from "@/lib/flashcard/queries";
+import { getUserSrsConfig } from "@/lib/srs/review";
 
 export default async function StudyPage({ params }: { params: Promise<{ id: string }> }) {
   const session = await auth();
@@ -10,7 +11,10 @@ export default async function StudyPage({ params }: { params: Promise<{ id: stri
     redirect("/login");
   }
   const { id } = await params;
-  const queue = await getDueCards(session.user.id, id);
+  const [queue, srsConfig] = await Promise.all([
+    getDueCards(session.user.id, id),
+    getUserSrsConfig(session.user.id),
+  ]);
   if (!queue) {
     notFound();
   }
@@ -18,7 +22,7 @@ export default async function StudyPage({ params }: { params: Promise<{ id: stri
   return (
     <StudySession
       deckName={queue.deck.name}
-      cards={queue.cards.map((card) => serializeFlashcard(card, { intervals: true }))}
+      cards={queue.cards.map((card) => serializeFlashcard(card, { intervals: true, srsConfig }))}
     />
   );
 }

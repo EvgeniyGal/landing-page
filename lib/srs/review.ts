@@ -1,7 +1,10 @@
 import { and, eq } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { flashcards, reviewLogs, type ReviewRating } from "@/lib/db/schema";
+import { getUserSrsConfig } from "@/lib/srs/user-config";
 import { previewIntervals, scheduleReview, toSm2Card } from "@/lib/srs/sm2";
+
+export { getUserSrsConfig };
 
 export async function reviewCard(input: {
   userId: string;
@@ -16,8 +19,9 @@ export async function reviewCard(input: {
     return { ok: false as const, reason: "not_found" as const };
   }
 
+  const config = await getUserSrsConfig(input.userId);
   const previous = toSm2Card(card);
-  const next = scheduleReview(previous, input.rating);
+  const next = scheduleReview(previous, input.rating, new Date(), config);
 
   await db
     .update(flashcards)
@@ -43,6 +47,17 @@ export async function reviewCard(input: {
   return { ok: true as const, card: { ...card, ...next } };
 }
 
-export function ratingPreview(card: Parameters<typeof toSm2Card>[0]) {
-  return previewIntervals(toSm2Card(card));
+export function ratingPreview(
+  card: Parameters<typeof toSm2Card>[0],
+  config?: Parameters<typeof previewIntervals>[2],
+) {
+  return previewIntervals(toSm2Card(card), new Date(), config);
+}
+
+export async function ratingPreviewForUser(
+  userId: string,
+  card: Parameters<typeof toSm2Card>[0],
+) {
+  const config = await getUserSrsConfig(userId);
+  return ratingPreview(card, config);
 }

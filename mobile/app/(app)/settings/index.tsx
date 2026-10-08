@@ -29,6 +29,17 @@ export default function SettingsIndexScreen() {
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
+
+      <Pressable
+        style={styles.row}
+        onPress={() => router.push("/(app)/settings/srs")}
+      >
+        <View style={styles.copy}>
+          <Text style={styles.rowTitle}>Spaced repetition</Text>
+          <Text style={styles.rowMeta}>How often cards return; synced across devices</Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
     </View>
   );
 }

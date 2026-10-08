@@ -180,6 +180,10 @@ export const userPreferences = pgTable("user_preferences", {
   wordTextScale: real("word_text_scale").notNull().default(1),
   exampleTextScale: real("example_text_scale").notNull().default(1),
   explanationTextScale: real("explanation_text_scale").notNull().default(1),
+  srsIntervalModifier: real("srs_interval_modifier").notNull().default(1),
+  srsStartingEase: real("srs_starting_ease").notNull().default(2.5),
+  srsEasyBonus: real("srs_easy_bonus").notNull().default(1.3),
+  srsHardInterval: real("srs_hard_interval").notNull().default(0.8),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 

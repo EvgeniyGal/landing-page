@@ -1,3 +1,5 @@
+import { DEFAULT_SRS_CONFIG, type SrsConfig } from "@/lib/srs/config";
+
 export type Rating = "again" | "hard" | "good" | "easy";
 export type CardState = "new" | "learning" | "review" | "relearning";
 
@@ -12,21 +14,27 @@ export type Sm2Card = {
 };
 
 export const LEARNING_STEPS_MS = [60_000, 10 * 60_000] as const;
-export const GRADUATING_INTERVAL_DAYS = 1;
-export const EASY_INTERVAL_DAYS = 4;
-export const STARTING_EASE = 2.5;
-export const EASY_BONUS = 1.3;
-export const HARD_INTERVAL = 1.2;
-export const EASE_FLOOR = 1.3;
-export const INTERVAL_MODIFIER = 1;
+export const GRADUATING_INTERVAL_DAYS = DEFAULT_SRS_CONFIG.graduatingIntervalDays;
+export const EASY_INTERVAL_DAYS = DEFAULT_SRS_CONFIG.easyIntervalDays;
+export const STARTING_EASE = DEFAULT_SRS_CONFIG.startingEase;
+export const EASY_BONUS = DEFAULT_SRS_CONFIG.easyBonus;
+/** Product default: Hard shortens the current interval (unlike Anki’s 1.2). */
+export const HARD_INTERVAL = DEFAULT_SRS_CONFIG.hardInterval;
+export const EASE_FLOOR = DEFAULT_SRS_CONFIG.easeFloor;
+export const INTERVAL_MODIFIER = DEFAULT_SRS_CONFIG.intervalModifier;
 
 const DAY_MS = 86_400_000;
 
-export function newCardSchedule(now = new Date()): Sm2Card {
+function resolveConfig(config?: Partial<SrsConfig> | null): SrsConfig {
+  return { ...DEFAULT_SRS_CONFIG, ...config };
+}
+
+export function newCardSchedule(now = new Date(), config?: Partial<SrsConfig> | null): Sm2Card {
+  const cfg = resolveConfig(config);
   return {
     state: "new",
     stepIndex: 0,
-    ease: STARTING_EASE,
+    ease: cfg.startingEase,
     intervalDays: 0,
     dueAt: now,
     lapses: 0,
@@ -34,8 +42,8 @@ export function newCardSchedule(now = new Date()): Sm2Card {
   };
 }
 
-function clampEase(ease: number) {
-  return Math.max(EASE_FLOOR, Number(ease.toFixed(3)));
+function clampEase(ease: number, floor: number) {
+  return Math.max(floor, Number(ease.toFixed(3)));
 }
 
 function addDays(from: Date, days: number) {
@@ -65,15 +73,15 @@ function formatDuration(ms: number): string {
   return `${Math.round(days)}d`;
 }
 
-function applyLearning(card: Sm2Card, rating: Rating, now: Date): Sm2Card {
+function applyLearning(card: Sm2Card, rating: Rating, now: Date, cfg: SrsConfig): Sm2Card {
   if (rating === "easy") {
     return {
       ...card,
       state: "review",
       stepIndex: 0,
-      intervalDays: EASY_INTERVAL_DAYS,
-      dueAt: addDays(now, EASY_INTERVAL_DAYS),
-      ease: clampEase(card.ease + 0.15),
+      intervalDays: cfg.easyIntervalDays,
+      dueAt: addDays(now, cfg.easyIntervalDays),
+      ease: clampEase(card.ease + 0.15, cfg.easeFloor),
       reps: card.reps + 1,
     };
   }
@@ -114,8 +122,8 @@ function applyLearning(card: Sm2Card, rating: Rating, now: Date): Sm2Card {
   if (nextStep >= LEARNING_STEPS_MS.length) {
     const intervalDays =
       card.state === "relearning"
-        ? Math.max(1, card.intervalDays || GRADUATING_INTERVAL_DAYS)
-        : GRADUATING_INTERVAL_DAYS;
+        ? Math.max(cfg.graduatingIntervalDays, card.intervalDays || cfg.graduatingIntervalDays)
+        : cfg.graduatingIntervalDays;
     return {
       ...card,
       state: "review",
@@ -134,69 +142,95 @@ function applyLearning(card: Sm2Card, rating: Rating, now: Date): Sm2Card {
   };
 }
 
-function applyReview(card: Sm2Card, rating: Rating, now: Date): Sm2Card {
+function computeReviewIntervals(card: Sm2Card, cfg: SrsConfig) {
+  const current = Math.max(card.intervalDays || cfg.graduatingIntervalDays, cfg.graduatingIntervalDays);
+  let hard = Math.max(1, current * cfg.hardInterval * cfg.intervalModifier);
+  let good = Math.max(
+    cfg.graduatingIntervalDays,
+    current * card.ease * cfg.intervalModifier,
+  );
+  let easy = Math.max(
+    1,
+    current * card.ease * cfg.easyBonus * cfg.intervalModifier,
+  );
+
+  // Enforce Hard < Good < Easy (day intervals).
+  if (hard >= good) {
+    hard = Math.max(1, good - 0.1);
+  }
+  if (easy <= good) {
+    easy = good + 0.1;
+  }
+
+  return { hard, good, easy };
+}
+
+function applyReview(card: Sm2Card, rating: Rating, now: Date, cfg: SrsConfig): Sm2Card {
   if (rating === "again") {
     return {
       ...card,
       state: "relearning",
       stepIndex: 0,
-      ease: clampEase(card.ease - 0.2),
-      intervalDays: Math.max(1, card.intervalDays * 0),
+      ease: clampEase(card.ease - 0.2, cfg.easeFloor),
+      intervalDays: card.intervalDays * cfg.lapseNewInterval,
       dueAt: addMs(now, LEARNING_STEPS_MS[0]),
       lapses: card.lapses + 1,
       reps: card.reps + 1,
     };
   }
 
+  const intervals = computeReviewIntervals(card, cfg);
+
   if (rating === "hard") {
-    const intervalDays = Math.max(1, card.intervalDays * HARD_INTERVAL * INTERVAL_MODIFIER);
     return {
       ...card,
-      ease: clampEase(card.ease - 0.15),
-      intervalDays,
-      dueAt: addDays(now, intervalDays),
+      ease: clampEase(card.ease - 0.15, cfg.easeFloor),
+      intervalDays: intervals.hard,
+      dueAt: addDays(now, intervals.hard),
       reps: card.reps + 1,
     };
   }
 
   if (rating === "easy") {
-    const intervalDays = Math.max(
-      1,
-      (card.intervalDays || GRADUATING_INTERVAL_DAYS) * card.ease * EASY_BONUS * INTERVAL_MODIFIER,
-    );
     return {
       ...card,
-      ease: clampEase(card.ease + 0.15),
-      intervalDays,
-      dueAt: addDays(now, intervalDays),
+      ease: clampEase(card.ease + 0.15, cfg.easeFloor),
+      intervalDays: intervals.easy,
+      dueAt: addDays(now, intervals.easy),
       reps: card.reps + 1,
     };
   }
 
-  const intervalDays = Math.max(
-    GRADUATING_INTERVAL_DAYS,
-    (card.intervalDays || GRADUATING_INTERVAL_DAYS) * card.ease * INTERVAL_MODIFIER,
-  );
   return {
     ...card,
-    intervalDays,
-    dueAt: addDays(now, intervalDays),
+    intervalDays: intervals.good,
+    dueAt: addDays(now, intervals.good),
     reps: card.reps + 1,
   };
 }
 
-export function scheduleReview(card: Sm2Card, rating: Rating, now = new Date()): Sm2Card {
+export function scheduleReview(
+  card: Sm2Card,
+  rating: Rating,
+  now = new Date(),
+  config?: Partial<SrsConfig> | null,
+): Sm2Card {
+  const cfg = resolveConfig(config);
   if (card.state === "new" || card.state === "learning" || card.state === "relearning") {
-    return applyLearning(card, rating, now);
+    return applyLearning(card, rating, now, cfg);
   }
-  return applyReview(card, rating, now);
+  return applyReview(card, rating, now, cfg);
 }
 
-export function previewIntervals(card: Sm2Card, now = new Date()): Record<Rating, string> {
+export function previewIntervals(
+  card: Sm2Card,
+  now = new Date(),
+  config?: Partial<SrsConfig> | null,
+): Record<Rating, string> {
   const ratings: Rating[] = ["again", "hard", "good", "easy"];
   return Object.fromEntries(
     ratings.map((rating) => {
-      const next = scheduleReview(card, rating, now);
+      const next = scheduleReview(card, rating, now, config);
       return [rating, formatDuration(next.dueAt.getTime() - now.getTime())];
     }),
   ) as Record<Rating, string>;

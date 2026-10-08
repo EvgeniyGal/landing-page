@@ -17,13 +17,21 @@ const patchSchema = z
     wordTextScale: textScaleSchema.optional(),
     exampleTextScale: textScaleSchema.optional(),
     explanationTextScale: textScaleSchema.optional(),
+    srsIntervalModifier: z.number().min(0.5).max(2).optional(),
+    srsStartingEase: z.number().min(1.3).max(3).optional(),
+    srsEasyBonus: z.number().min(1).max(2).optional(),
+    srsHardInterval: z.number().min(0.5).max(1).optional(),
   })
   .refine(
     (value) =>
       value.lazyEyeEnabled !== undefined ||
       value.wordTextScale !== undefined ||
       value.exampleTextScale !== undefined ||
-      value.explanationTextScale !== undefined,
+      value.explanationTextScale !== undefined ||
+      value.srsIntervalModifier !== undefined ||
+      value.srsStartingEase !== undefined ||
+      value.srsEasyBonus !== undefined ||
+      value.srsHardInterval !== undefined,
     { message: "At least one preference is required." },
   );
 

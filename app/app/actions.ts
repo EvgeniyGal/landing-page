@@ -24,7 +24,7 @@ import {
   type AnaglyphProfileInput,
   type PreferencesPatch,
 } from "@/lib/anaglyph/profiles";
-import { reviewCard } from "@/lib/srs/review";
+import { getUserSrsConfig, reviewCard } from "@/lib/srs/review";
 import type { ReviewRating } from "@/lib/db/schema";
 import type { GeneratedCard } from "@/lib/flashcard/schema";
 import { revalidatePath } from "next/cache";
@@ -238,7 +238,8 @@ export async function reviewCardAction(input: { flashcardId: string; rating: Rev
   if (!result.ok) {
     return { ok: false as const, error: "Card not found." };
   }
-  const card = serializeFlashcard(result.card, { intervals: true });
+  const srsConfig = await getUserSrsConfig(user.id);
+  const card = serializeFlashcard(result.card, { intervals: true, srsConfig });
   revalidatePath("/app");
   revalidatePath(`/app/decks/${result.card.deckId}`);
   revalidatePath(`/app/decks/${result.card.deckId}/study`);
@@ -329,7 +330,11 @@ export async function setPreferencesAction(patch: PreferencesPatch) {
     patch.lazyEyeEnabled !== undefined ||
     patch.wordTextScale !== undefined ||
     patch.exampleTextScale !== undefined ||
-    patch.explanationTextScale !== undefined;
+    patch.explanationTextScale !== undefined ||
+    patch.srsIntervalModifier !== undefined ||
+    patch.srsStartingEase !== undefined ||
+    patch.srsEasyBonus !== undefined ||
+    patch.srsHardInterval !== undefined;
   if (!hasPatch) {
     return { ok: false as const, error: "At least one preference is required." };
   }

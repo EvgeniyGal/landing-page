@@ -1,7 +1,7 @@
 import { and, asc, eq, lte, sql } from "drizzle-orm";
 import { getDb } from "@/lib/db";
 import { decks, flashcards } from "@/lib/db/schema";
-import { ratingPreview } from "@/lib/srs/review";
+import { getUserSrsConfig, ratingPreview } from "@/lib/srs/review";
 
 export async function listDecksForUser(userId: string) {
   const db = getDb();
@@ -60,17 +60,20 @@ export async function getDueCards(userId: string, deckId: string) {
   }
 
   const now = new Date();
-  const cards = await db.query.flashcards.findMany({
-    where: and(eq(flashcards.deckId, deckId), lte(flashcards.dueAt, now)),
-    orderBy: [asc(flashcards.dueAt), asc(flashcards.createdAt)],
-    with: { audio: true },
-  });
+  const [cards, srsConfig] = await Promise.all([
+    db.query.flashcards.findMany({
+      where: and(eq(flashcards.deckId, deckId), lte(flashcards.dueAt, now)),
+      orderBy: [asc(flashcards.dueAt), asc(flashcards.createdAt)],
+      with: { audio: true },
+    }),
+    getUserSrsConfig(userId),
+  ]);
 
   return {
     deck,
     cards: cards.map((card) => ({
       ...card,
-      intervals: ratingPreview(card),
+      intervals: ratingPreview(card, srsConfig),
     })),
   };
 }

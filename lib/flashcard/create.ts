@@ -5,6 +5,7 @@ import { getOrCreateSettings } from "@/lib/db/settings";
 import { getDeckForUser, getOrCreateDefaultDeck } from "@/lib/flashcard/decks";
 import { formatFlashcardText, stripDuplicatePosPrefix } from "@/lib/flashcard/format";
 import { generateFlashcardContent } from "@/lib/openai/generate";
+import { getUserSrsConfig } from "@/lib/srs/user-config";
 import { newCardSchedule } from "@/lib/srs/sm2";
 import type { GeneratedCard } from "@/lib/flashcard/schema";
 import type { Flashcard } from "@/lib/db/schema";
@@ -58,7 +59,8 @@ export async function createFlashcardFromContentForUser(input: {
     definition: stripDuplicatePosPrefix(input.card.definition, input.card.partOfSpeech),
   };
   const outputText = formatFlashcardText(card);
-  const schedule = newCardSchedule();
+  const srsConfig = await getUserSrsConfig(input.userId);
+  const schedule = newCardSchedule(new Date(), srsConfig);
   const settings = await getOrCreateSettings();
   const model = input.model ?? settings.openaiModel;
   const promptSnapshot = input.promptSnapshot ?? settings.flashcardPrompt;

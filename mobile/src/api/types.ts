@@ -76,6 +76,10 @@ export type UserPreferences = {
   wordTextScale: number;
   exampleTextScale: number;
   explanationTextScale: number;
+  srsIntervalModifier: number;
+  srsStartingEase: number;
+  srsEasyBonus: number;
+  srsHardInterval: number;
 };
 
 export type PreferencesPatch = {
@@ -83,6 +87,10 @@ export type PreferencesPatch = {
   wordTextScale?: number;
   exampleTextScale?: number;
   explanationTextScale?: number;
+  srsIntervalModifier?: number;
+  srsStartingEase?: number;
+  srsEasyBonus?: number;
+  srsHardInterval?: number;
 };
 
 export type ApiErrorBody = {

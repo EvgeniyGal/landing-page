@@ -2,7 +2,12 @@ import { Suspense } from "react";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { SettingsTabs } from "@/components/app/settings-tabs";
-import { ensureDefaultAnaglyphProfile, serializeAnaglyphProfile } from "@/lib/anaglyph/profiles";
+import {
+  ensureDefaultAnaglyphProfile,
+  getOrCreatePreferences,
+  serializeAnaglyphProfile,
+  serializePreferences,
+} from "@/lib/anaglyph/profiles";
 
 export default async function SettingsPage() {
   const session = await auth();
@@ -10,8 +15,12 @@ export default async function SettingsPage() {
     redirect("/login");
   }
 
-  const profiles = await ensureDefaultAnaglyphProfile(session.user.id);
+  const [profiles, preferences] = await Promise.all([
+    ensureDefaultAnaglyphProfile(session.user.id),
+    getOrCreatePreferences(session.user.id),
+  ]);
   const serialized = profiles.map(serializeAnaglyphProfile);
+  const prefs = serializePreferences(preferences);
 
   return (
     <Suspense
@@ -19,7 +28,15 @@ export default async function SettingsPage() {
         <div className="mx-auto max-w-5xl px-4 py-8 text-white/50">Loading settings…</div>
       }
     >
-      <SettingsTabs profiles={serialized} />
+      <SettingsTabs
+        profiles={serialized}
+        srsPrefs={{
+          srsIntervalModifier: prefs.srsIntervalModifier,
+          srsStartingEase: prefs.srsStartingEase,
+          srsEasyBonus: prefs.srsEasyBonus,
+          srsHardInterval: prefs.srsHardInterval,
+        }}
+      />
     </Suspense>
   );
 }

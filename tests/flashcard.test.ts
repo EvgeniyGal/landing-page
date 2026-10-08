@@ -81,6 +81,71 @@ test("SM-2 three Goods graduate after both learning steps", () => {
   assert.equal(graduated.intervalDays, 1);
 });
 
+test("SM-2 Again on review enters relearning with zeroed lapse interval", () => {
+  const now = new Date("2026-01-01T00:00:00Z");
+  const review = {
+    ...newCardSchedule(now),
+    state: "review" as const,
+    ease: 2.5,
+    intervalDays: 10,
+    dueAt: now,
+  };
+  const next = scheduleReview(review, "again", now);
+  assert.equal(next.state, "relearning");
+  assert.equal(next.stepIndex, 0);
+  assert.equal(next.intervalDays, 0);
+  assert.equal(next.ease, 2.3);
+  assert.equal(next.lapses, 1);
+  assert.equal(next.dueAt.getTime() - now.getTime(), 60_000);
+});
+
+test("SM-2 Hard shortens the current review interval", () => {
+  const now = new Date("2026-01-01T00:00:00Z");
+  const review = {
+    ...newCardSchedule(now),
+    state: "review" as const,
+    ease: 2.5,
+    intervalDays: 10,
+    dueAt: now,
+  };
+  const next = scheduleReview(review, "hard", now);
+  assert.equal(next.state, "review");
+  assert.equal(next.intervalDays, 8);
+  assert.equal(next.ease, 2.35);
+});
+
+test("SM-2 Good and Easy grow review intervals with Hard < Good < Easy", () => {
+  const now = new Date("2026-01-01T00:00:00Z");
+  const review = {
+    ...newCardSchedule(now),
+    state: "review" as const,
+    ease: 2.5,
+    intervalDays: 10,
+    dueAt: now,
+  };
+  const hard = scheduleReview(review, "hard", now);
+  const good = scheduleReview(review, "good", now);
+  const easy = scheduleReview(review, "easy", now);
+  assert.equal(good.intervalDays, 25);
+  assert.equal(easy.intervalDays, 32.5);
+  assert.equal(easy.ease, 2.65);
+  assert.ok(hard.intervalDays < good.intervalDays);
+  assert.ok(good.intervalDays < easy.intervalDays);
+});
+
+test("SM-2 interval modifier scales Good intervals", () => {
+  const now = new Date("2026-01-01T00:00:00Z");
+  const review = {
+    ...newCardSchedule(now),
+    state: "review" as const,
+    ease: 2.5,
+    intervalDays: 10,
+    dueAt: now,
+  };
+  const next = scheduleReview(review, "good", now, { intervalModifier: 0.5 });
+  assert.equal(next.intervalDays, 12.5);
+});
+
 test("previewIntervals returns labels for all ratings", () => {
   const labels = previewIntervals(newCardSchedule());
   assert.ok(labels.again);

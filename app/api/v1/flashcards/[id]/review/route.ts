@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { userFromApiRequest } from "@/lib/api/session";
 import { serializeFlashcard } from "@/lib/api/serialize";
-import { reviewCard } from "@/lib/srs/review";
+import { getUserSrsConfig, reviewCard } from "@/lib/srs/review";
 
 const schema = z.object({
   rating: z.enum(["again", "hard", "good", "easy"]),
@@ -30,5 +30,8 @@ export async function POST(
   if (!result.ok) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
-  return NextResponse.json({ card: serializeFlashcard(result.card, { intervals: true }) });
+  const srsConfig = await getUserSrsConfig(user.id);
+  return NextResponse.json({
+    card: serializeFlashcard(result.card, { intervals: true, srsConfig }),
+  });
 }

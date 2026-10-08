@@ -8,6 +8,10 @@ import {
 } from "@/lib/db/schema";
 import { clampHue, clampLightness } from "@/lib/anaglyph/color";
 import {
+  normalizeSrsConfig,
+  serializeSrsPreferences,
+} from "@/lib/srs/config";
+import {
   serializeStudyTextScales,
   type StudyTextScales,
   type TextScaleStep,
@@ -72,6 +76,10 @@ export type PreferencesPatch = {
   wordTextScale?: TextScaleStep;
   exampleTextScale?: TextScaleStep;
   explanationTextScale?: TextScaleStep;
+  srsIntervalModifier?: number;
+  srsStartingEase?: number;
+  srsEasyBonus?: number;
+  srsHardInterval?: number;
 };
 
 export function serializePreferences(prefs: {
@@ -79,19 +87,53 @@ export function serializePreferences(prefs: {
   wordTextScale: number;
   exampleTextScale: number;
   explanationTextScale: number;
+  srsIntervalModifier?: number;
+  srsStartingEase?: number;
+  srsEasyBonus?: number;
+  srsHardInterval?: number;
 }) {
   return {
     lazyEyeEnabled: prefs.lazyEyeEnabled,
     ...serializeStudyTextScales(prefs),
+    ...serializeSrsPreferences(prefs),
   };
 }
 
 export async function updatePreferences(userId: string, patch: PreferencesPatch) {
   const db = getDb();
-  await getOrCreatePreferences(userId);
+  const current = await getOrCreatePreferences(userId);
+  const hasSrsPatch =
+    patch.srsIntervalModifier !== undefined ||
+    patch.srsStartingEase !== undefined ||
+    patch.srsEasyBonus !== undefined ||
+    patch.srsHardInterval !== undefined;
+  const srsNormalized = hasSrsPatch
+    ? normalizeSrsConfig({
+        intervalModifier: patch.srsIntervalModifier ?? current.srsIntervalModifier,
+        startingEase: patch.srsStartingEase ?? current.srsStartingEase,
+        easyBonus: patch.srsEasyBonus ?? current.srsEasyBonus,
+        hardInterval: patch.srsHardInterval ?? current.srsHardInterval,
+      })
+    : null;
   const [updated] = await db
     .update(userPreferences)
-    .set({ ...patch, updatedAt: new Date() })
+    .set({
+      ...(patch.lazyEyeEnabled !== undefined ? { lazyEyeEnabled: patch.lazyEyeEnabled } : {}),
+      ...(patch.wordTextScale !== undefined ? { wordTextScale: patch.wordTextScale } : {}),
+      ...(patch.exampleTextScale !== undefined ? { exampleTextScale: patch.exampleTextScale } : {}),
+      ...(patch.explanationTextScale !== undefined
+        ? { explanationTextScale: patch.explanationTextScale }
+        : {}),
+      ...(srsNormalized
+        ? {
+            srsIntervalModifier: srsNormalized.intervalModifier,
+            srsStartingEase: srsNormalized.startingEase,
+            srsEasyBonus: srsNormalized.easyBonus,
+            srsHardInterval: srsNormalized.hardInterval,
+          }
+        : {}),
+      updatedAt: new Date(),
+    })
     .where(eq(userPreferences.userId, userId))
     .returning();
   return updated!;

@@ -2,11 +2,12 @@ import type { Flashcard, FlashcardAudio } from "@/lib/db/schema";
 import { formatBackDefinition } from "@/lib/flashcard/format";
 import { audioPlaybackPath } from "@/lib/flashcard/audio";
 import { cardPayload } from "@/lib/flashcard/create";
+import type { SrsConfig } from "@/lib/srs/config";
 import { ratingPreview } from "@/lib/srs/review";
 
 export function serializeFlashcard(
   card: Flashcard & { audio?: FlashcardAudio[] },
-  options?: { intervals?: boolean },
+  options?: { intervals?: boolean; srsConfig?: Partial<SrsConfig> | null },
 ) {
   const payload = cardPayload(card);
   const audio = Object.fromEntries(
@@ -31,6 +32,6 @@ export function serializeFlashcard(
     ease: card.ease,
     intervalDays: card.intervalDays,
     audio,
-    intervals: options?.intervals ? ratingPreview(card) : undefined,
+    intervals: options?.intervals ? ratingPreview(card, options.srsConfig) : undefined,
   };
 }
