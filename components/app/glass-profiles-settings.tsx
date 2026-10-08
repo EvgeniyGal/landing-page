@@ -319,8 +319,10 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
 
           <AnaglyphColorPicker
             eye={eye}
-            hue={eye === "left" ? selected.leftHue : selected.rightHue}
-            lightness={eye === "left" ? selected.leftLightness : selected.rightLightness}
+            leftHue={selected.leftHue}
+            leftLightness={selected.leftLightness}
+            rightHue={selected.rightHue}
+            rightLightness={selected.rightLightness}
             onEyeChange={setEye}
             onHueChange={(hue) =>
               patchSelected(eye === "left" ? { leftHue: hue } : { rightHue: hue })
@@ -367,17 +369,17 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
 
         <div className="space-y-4 rounded-2xl border border-white/10 p-5" style={{ background: previewBg, color: previewFg }}>
           <p className="text-xs uppercase tracking-wide opacity-60">Live preview</p>
-          <p className="text-3xl font-semibold">
+          <p className="text-5xl font-semibold">
             <DichopticText text="abolish" colors={colors} mode="letters" neutralColor={previewFg} />
           </p>
-          <p className="text-lg">
+          <p className="text-2xl">
             <DichopticText text="(verb)" colors={colors} mode="letters" neutralColor={previewFg} />
           </p>
-          <p className="text-base opacity-90">
+          <p className="text-xl opacity-90">
             <DichopticText text="/əˈbɒlɪʃ/" colors={colors} mode="letters" neutralColor={previewFg} />
           </p>
           <hr className="border-current/20" />
-          <p className="leading-7">
+          <p className="text-xl leading-8">
             <DichopticText
               text="The government decided to abolish the outdated law."
               colors={colors}
@@ -385,14 +387,14 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
               neutralColor={previewFg}
             />
           </p>
-          <div className="flex gap-3 pt-2">
+          <div className="flex gap-6 pt-2">
             <div
-              className="h-10 w-10 rounded-full border border-white/20"
+              className="h-20 w-20 rounded-full border border-white/20"
               style={{ background: eyeColor(colors, "left") }}
               title="Left"
             />
             <div
-              className="h-10 w-10 rounded-full border border-white/20"
+              className="h-20 w-20 rounded-full border border-white/20"
               style={{ background: eyeColor(colors, "right") }}
               title="Right"
             />

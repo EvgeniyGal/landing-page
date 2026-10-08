@@ -17,6 +17,7 @@ import {
 import type { AnaglyphBackground, AnaglyphProfile } from "@/src/api/types";
 import { useLazyEye } from "@/src/anaglyph/LazyEyeContext";
 import { ColorSlider } from "@/src/components/anaglyph/ColorSlider";
+import { HueDial } from "@/src/components/anaglyph/HueDial";
 import { DichopticText } from "@/src/components/anaglyph/DichopticText";
 import { ErrorText, LoadingBlock } from "@/src/components/ui";
 import {
@@ -29,8 +30,6 @@ import {
 import { messageFromError } from "@/src/lib/format";
 import { withLocalActiveFlag } from "@/src/lib/device-profile";
 import { colors } from "@/src/theme";
-
-const HUE_STOPS = [0, 60, 120, 180, 240, 300, 360].map((hue) => hslToCss(hue, 50));
 
 export default function GlassesSettingsScreen() {
   const { refresh, activateProfile, activeProfile } = useLazyEye();
@@ -267,27 +266,32 @@ export default function GlassesSettingsScreen() {
       />
 
       <View style={styles.row}>
-        {(["left", "right"] as const).map((side) => (
-          <Pressable
-            key={side}
-            onPress={() => setEye(side)}
-            style={[styles.eyeChip, eye === side && styles.eyeChipActive]}
-          >
-            <Text style={[styles.eyeChipText, eye === side && styles.eyeChipTextActive]}>
-              {side} eye
-            </Text>
-          </Pressable>
-        ))}
+        {(["left", "right"] as const).map((side) => {
+          const sideHue = side === "left" ? selected.leftHue : selected.rightHue;
+          const sideLightness = side === "left" ? selected.leftLightness : selected.rightLightness;
+          const selectedEye = eye === side;
+          return (
+            <Pressable
+              key={side}
+              onPress={() => setEye(side)}
+              style={[
+                styles.eyeChip,
+                { backgroundColor: hslToCss(sideHue, sideLightness) },
+                selectedEye && styles.eyeChipSelected,
+              ]}
+            >
+              <Text style={[styles.eyeChipText, { color: "#111111" }]}>
+                {side} eye
+              </Text>
+            </Pressable>
+          );
+        })}
       </View>
 
-      <View style={[styles.swatch, { backgroundColor: hslToCss(activeHue, activeLightness) }]} />
-
       <Text style={styles.label}>Hue</Text>
-      <ColorSlider
-        value={activeHue}
-        min={0}
-        max={360}
-        trackColors={HUE_STOPS}
+      <HueDial
+        hue={activeHue}
+        lightness={activeLightness}
         onChange={(hue) => patchSelected(eye === "left" ? { leftHue: hue } : { rightHue: hue })}
       />
 
@@ -416,11 +420,13 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     paddingHorizontal: 12,
     paddingVertical: 8,
+    borderWidth: 2,
+    borderColor: "transparent",
   },
   eyeChipActive: { backgroundColor: "#fff" },
+  eyeChipSelected: { borderColor: "#fff" },
   eyeChipText: { color: colors.text, fontWeight: "600", textTransform: "capitalize" },
   eyeChipTextActive: { color: "#111" },
-  swatch: { height: 64, borderRadius: 16, borderWidth: 1, borderColor: colors.border },
   label: { color: colors.mutedStrong, fontSize: 12, textTransform: "uppercase", marginTop: 4 },
   preview: { borderRadius: 16, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border },
   previewWord: { fontSize: 28, fontWeight: "700" },
