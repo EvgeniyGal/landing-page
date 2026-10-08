@@ -97,15 +97,12 @@ function applyLearning(card: Sm2Card, rating: Rating, now: Date, cfg: SrsConfig)
   }
 
   if (card.state === "new") {
-    const delay =
-      rating === "hard"
-        ? (LEARNING_STEPS_MS[0] + LEARNING_STEPS_MS[1]) / 2
-        : LEARNING_STEPS_MS[0];
+    // Again/Good are both the first step (1m), so Hard (avg of those) is also 1m.
     return {
       ...card,
       state: "learning",
       stepIndex: 0,
-      dueAt: addMs(now, delay),
+      dueAt: addMs(now, LEARNING_STEPS_MS[0]),
       reps: card.reps + 1,
     };
   }
