@@ -1,4 +1,4 @@
-export const TEXT_SCALE_STEPS = [0.75, 1, 1.25, 1.5] as const;
+export const TEXT_SCALE_STEPS = [0.75, 1, 1.25, 1.5, 1.75, 2] as const;
 
 export type TextScaleStep = (typeof TEXT_SCALE_STEPS)[number];
 
@@ -7,6 +7,8 @@ export const TEXT_SCALE_LABELS: Record<TextScaleStep, string> = {
   1: "Default",
   1.25: "Large",
   1.5: "XL",
+  1.75: "XXL",
+  2: "XXXL",
 };
 
 export const DEFAULT_TEXT_SCALE: TextScaleStep = 1;
