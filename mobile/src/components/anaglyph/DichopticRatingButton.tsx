@@ -1,50 +1,35 @@
-import { useEffect, useRef } from "react";
-import { Animated, Pressable, StyleSheet, Text, View } from "react-native";
-import { DichopticText } from "@/src/components/anaglyph/DichopticText";
-import {
-  contrastTextForLightness,
-  eyeColor,
-  type AnaglyphColors,
-} from "@/src/lib/anaglyph/color";
+import { Pressable, StyleSheet, Text } from "react-native";
+import { eyeColor, type AnaglyphColors } from "@/src/lib/anaglyph/color";
 
 export function DichopticRatingButton({
   label,
   interval,
   colors,
+  invert = false,
   disabled,
   onPress,
 }: {
   label: string;
   interval?: string;
   colors: AnaglyphColors;
+  /** When true, swap which eye color is background vs text. */
+  invert?: boolean;
   disabled?: boolean;
   onPress: () => void;
 }) {
-  const pulse = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 600, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 600, useNativeDriver: true }),
-      ]),
-    );
-    loop.start();
-    return () => loop.stop();
-  }, [pulse]);
-
-  const leftOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [0.55, 1] });
-  const rightOpacity = pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 0.55] });
-  const labelColor = contrastTextForLightness((colors.leftLightness + colors.rightLightness) / 2);
+  const left = eyeColor(colors, "left");
+  const right = eyeColor(colors, "right");
+  const background = invert ? right : left;
+  const foreground = invert ? left : right;
 
   return (
-    <Pressable disabled={disabled} onPress={onPress} style={[styles.button, disabled && styles.disabled]}>
-      <Animated.View style={[styles.half, styles.left, { backgroundColor: eyeColor(colors, "left"), opacity: leftOpacity }]} />
-      <Animated.View style={[styles.half, styles.right, { backgroundColor: eyeColor(colors, "right"), opacity: rightOpacity }]} />
-      <View style={styles.content}>
-        <DichopticText text={label} colors={colors} mode="letters" neutralColor={labelColor} style={styles.label} />
-        {interval ? <Text style={[styles.interval, { color: labelColor }]}>{interval}</Text> : null}
-      </View>
+    <Pressable
+      disabled={disabled}
+      onPress={onPress}
+      style={[styles.button, { backgroundColor: background }, disabled && styles.disabled]}
+    >
+      <Text style={[styles.label, { color: foreground }]}>{label}</Text>
+      {interval ? <Text style={[styles.interval, { color: foreground }]}>{interval}</Text> : null}
     </Pressable>
   );
 }
@@ -54,30 +39,22 @@ const styles = StyleSheet.create({
     width: "47%",
     borderRadius: 12,
     overflow: "hidden",
-    minHeight: 56,
+    minHeight: 72,
     justifyContent: "center",
-  },
-  half: {
-    position: "absolute",
-    top: 0,
-    bottom: 0,
-    width: "50%",
-  },
-  left: { left: 0 },
-  right: { right: 0 },
-  content: {
-    paddingVertical: 12,
-    paddingHorizontal: 10,
     alignItems: "center",
+    paddingVertical: 14,
+    paddingHorizontal: 10,
   },
   label: {
-    fontSize: 14,
+    fontSize: 28,
     fontWeight: "700",
+    lineHeight: 32,
   },
   interval: {
-    fontSize: 11,
-    opacity: 0.8,
-    marginTop: 2,
+    fontSize: 18,
+    fontWeight: "600",
+    opacity: 0.9,
+    marginTop: 4,
   },
   disabled: {
     opacity: 0.55,

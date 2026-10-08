@@ -326,13 +326,14 @@ export function StudySession({
         <div className="mt-8 flex justify-center">
           {showAnswer ? (
             <div className="grid w-full max-w-xl grid-cols-2 gap-3 sm:grid-cols-4">
-              {RATINGS.map((rating) =>
+              {RATINGS.map((rating, index) =>
                 colors ? (
                   <DichopticRatingButton
                     key={rating.id}
                     label={rating.label}
                     interval={card.intervals?.[rating.id]}
                     colors={colors}
+                    invert={index % 2 === 1}
                     disabled={busy}
                     onClick={() => void rate(rating.id)}
                   />

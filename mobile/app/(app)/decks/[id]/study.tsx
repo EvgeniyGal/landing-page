@@ -313,13 +313,14 @@ export default function StudyScreen() {
       <View style={styles.footer}>
         {showAnswer ? (
           <View style={styles.ratings}>
-            {RATINGS.map((rating) =>
+            {RATINGS.map((rating, index) =>
               anaglyphColors ? (
                 <DichopticRatingButton
                   key={rating.id}
                   label={rating.label}
                   interval={card.intervals?.[rating.id]}
                   colors={anaglyphColors}
+                  invert={index % 2 === 1}
                   disabled={busy}
                   onPress={() => void rate(rating.id)}
                 />

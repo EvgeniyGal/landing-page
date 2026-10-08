@@ -1,53 +1,41 @@
 "use client";
 
-import { DichopticText } from "@/components/app/dichoptic-text";
-import {
-  contrastTextForLightness,
-  eyeColor,
-  type AnaglyphColors,
-} from "@/lib/anaglyph/color";
+import { eyeColor, type AnaglyphColors } from "@/lib/anaglyph/color";
 
 export function DichopticRatingButton({
   label,
   interval,
   colors,
+  invert = false,
   disabled,
   onClick,
 }: {
   label: string;
   interval?: string;
   colors: AnaglyphColors;
+  /** When true, swap which eye color is background vs text. */
+  invert?: boolean;
   disabled?: boolean;
   onClick: () => void;
 }) {
   const left = eyeColor(colors, "left");
   const right = eyeColor(colors, "right");
-  const labelColor = contrastTextForLightness(
-    (colors.leftLightness + colors.rightLightness) / 2,
-  );
+  const background = invert ? right : left;
+  const foreground = invert ? left : right;
 
   return (
     <button
       type="button"
       disabled={disabled}
       onClick={onClick}
-      className="relative overflow-hidden rounded-xl px-3 py-3 text-center disabled:opacity-55"
+      className="rounded-xl px-3 py-4 text-center disabled:opacity-55"
+      style={{ background }}
     >
-      <span
-        className="anaglyph-pulse-left absolute inset-y-0 left-0 w-1/2"
-        style={{ background: left }}
-        aria-hidden
-      />
-      <span
-        className="anaglyph-pulse-right absolute inset-y-0 right-0 w-1/2"
-        style={{ background: right }}
-        aria-hidden
-      />
-      <span className="relative block text-sm font-semibold" style={{ color: labelColor }}>
-        <DichopticText text={label} colors={colors} mode="letters" neutralColor={labelColor} />
+      <span className="block text-2xl font-bold leading-tight" style={{ color: foreground }}>
+        {label}
       </span>
       {interval ? (
-        <span className="relative block text-xs opacity-80" style={{ color: labelColor }}>
+        <span className="mt-1 block text-base font-semibold opacity-90" style={{ color: foreground }}>
           {interval}
         </span>
       ) : null}
