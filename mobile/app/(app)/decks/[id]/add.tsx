@@ -1,8 +1,13 @@
 import { useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
-import { createFlashcard, generateAudio } from "@/src/api/endpoints";
-import type { AudioKind, Flashcard } from "@/src/api/types";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import {
+  createFlashcardFromContent,
+  deleteFlashcard,
+  generateAudio,
+  previewFlashcard,
+} from "@/src/api/endpoints";
+import type { Flashcard, FlashcardWrite } from "@/src/api/types";
 import { GeneratedBadge, SpeakerButton } from "@/src/components/SpeakerButton";
 import {
   ChipButton,
@@ -14,16 +19,42 @@ import { cardHead, messageFromError } from "@/src/lib/format";
 import { colors } from "@/src/theme";
 
 const EXAMPLE_KINDS = ["example_1", "example_2", "example_3"] as const;
+type AudioKindKey = "word" | (typeof EXAMPLE_KINDS)[number];
 
 export default function AddCardScreen() {
   const { id: deckId } = useLocalSearchParams<{ id: string }>();
   const [word, setWord] = useState("");
   const [pending, setPending] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [card, setCard] = useState<Flashcard | null>(null);
-  const [selectedExamples, setSelectedExamples] = useState<(typeof EXAMPLE_KINDS)[number][]>([]);
-  const [voiceBusy, setVoiceBusy] = useState<"word" | "examples" | null>(null);
+  const [preview, setPreview] = useState<FlashcardWrite | null>(null);
+  const [inputText, setInputText] = useState("");
+  const [saved, setSaved] = useState<Flashcard | null>(null);
+  const [voiceBusy, setVoiceBusy] = useState<AudioKindKey | null>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
+
+  const display = saved
+    ? {
+        word: saved.word,
+        partOfSpeech: saved.partOfSpeech,
+        transcription: saved.transcription,
+        irregularForms: saved.irregularForms,
+        examples: saved.examples,
+        definition: saved.definition,
+      }
+    : preview;
+
+  async function discardWorkingCard() {
+    if (!saved) {
+      return;
+    }
+    try {
+      await deleteFlashcard(saved.id);
+    } catch {
+      // Best-effort cleanup of an unconfirmed working card.
+    }
+    setSaved(null);
+  }
 
   async function onGenerate() {
     if (!deckId) {
@@ -33,9 +64,10 @@ export default function AddCardScreen() {
     setError(null);
     setVoiceError(null);
     try {
-      const result = await createFlashcard(word.trim(), deckId);
-      setCard(result.card);
-      setSelectedExamples([]);
+      await discardWorkingCard();
+      const result = await previewFlashcard(word.trim());
+      setPreview(result.card);
+      setInputText(result.inputText);
       setWord("");
     } catch (err) {
       setError(messageFromError(err, "Could not generate a flashcard."));
@@ -44,46 +76,59 @@ export default function AddCardScreen() {
     }
   }
 
-  function toggleExample(kind: (typeof EXAMPLE_KINDS)[number]) {
-    setSelectedExamples((current) =>
-      current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
-    );
-  }
-
-  async function generateWordVoice() {
-    if (!card) {
-      return;
+  async function ensureSavedCard(): Promise<Flashcard | null> {
+    if (saved) {
+      return saved;
     }
-    setVoiceBusy("word");
-    setVoiceError(null);
+    if (!preview || !deckId) {
+      return null;
+    }
     try {
-      const result = await generateAudio(card.id, "word");
-      setCard((current) => (current ? { ...current, audio: { ...current.audio, ...result.audio } } : current));
+      const result = await createFlashcardFromContent(inputText || preview.word, preview, deckId);
+      setSaved(result.card);
+      return result.card;
     } catch (err) {
-      setVoiceError(messageFromError(err, "Could not generate audio."));
-    } finally {
-      setVoiceBusy(null);
+      setError(messageFromError(err, "Could not save the flashcard."));
+      return null;
     }
   }
 
-  async function generateSelectedExamples() {
-    if (!card || selectedExamples.length === 0) {
+  async function onAddCard() {
+    if (!display) {
       return;
     }
-    const kinds = selectedExamples.filter((kind) => !card.audio[kind]);
-    if (!kinds.length) {
-      return;
-    }
-    setVoiceBusy("examples");
-    setVoiceError(null);
+    setSaving(true);
+    setError(null);
     try {
-      const audio: Partial<Record<AudioKind, string>> = {};
-      for (const kind of kinds) {
-        const result = await generateAudio(card.id, kind);
-        Object.assign(audio, result.audio);
+      if (!saved) {
+        const created = await ensureSavedCard();
+        if (!created) {
+          return;
+        }
       }
-      setCard((current) => (current ? { ...current, audio: { ...current.audio, ...audio } } : current));
-      setSelectedExamples((current) => current.filter((kind) => !kinds.includes(kind)));
+      setPreview(null);
+      setSaved(null);
+      setInputText("");
+      setWord("");
+      setVoiceError(null);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function generateVoice(kind: AudioKindKey) {
+    setVoiceBusy(kind);
+    setVoiceError(null);
+    setError(null);
+    try {
+      const card = await ensureSavedCard();
+      if (!card) {
+        return;
+      }
+      const result = await generateAudio(card.id, kind);
+      setSaved((current) =>
+        current ? { ...current, audio: { ...current.audio, ...result.audio } } : current,
+      );
     } catch (err) {
       setVoiceError(messageFromError(err, "Could not generate audio."));
     } finally {
@@ -91,9 +136,8 @@ export default function AddCardScreen() {
     }
   }
 
-  const head = card ? cardHead(card.word, card.irregularForms) : null;
-  const wordGenerated = Boolean(card?.audio.word);
-  const pendingExampleCount = selectedExamples.filter((kind) => !card?.audio[kind]).length;
+  const head = display ? cardHead(display.word, display.irregularForms) : null;
+  const wordGenerated = Boolean(saved?.audio.word);
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
@@ -115,82 +159,59 @@ export default function AddCardScreen() {
 
       <View style={styles.card}>
         <Text style={styles.sectionLabel}>Front side</Text>
-        {card ? (
+        {display ? (
           <View style={styles.cardBody}>
             <View style={styles.headRow}>
               <View style={styles.flex}>
                 <Text style={styles.head}>
                   {head}
-                  {card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}
+                  {display.partOfSpeech ? ` (${display.partOfSpeech})` : ""}
                 </Text>
-                <Text style={styles.transcription}>{card.transcription}</Text>
+                <Text style={styles.transcription}>{display.transcription}</Text>
               </View>
-              {wordGenerated ? (
+              {wordGenerated && saved?.audio.word ? (
                 <View style={styles.audioCol}>
-                  <SpeakerButton url={card.audio.word} />
+                  <SpeakerButton url={saved.audio.word} />
                   <GeneratedBadge />
                 </View>
               ) : (
                 <ChipButton
-                  label={voiceBusy === "word" ? "Generating…" : "Generate"}
+                  label={voiceBusy === "word" ? "Generating…" : "Generate audio"}
                   loading={voiceBusy === "word"}
-                  disabled={voiceBusy !== null}
-                  onPress={() => void generateWordVoice()}
+                  disabled={voiceBusy !== null || saving}
+                  onPress={() => void generateVoice("word")}
                 />
               )}
             </View>
 
             <View style={styles.examples}>
-              {card.examples.map((example, index) => {
+              {display.examples.map((example, index) => {
                 const kind = EXAMPLE_KINDS[index];
                 if (!kind) {
                   return null;
                 }
-                const generated = Boolean(card.audio[kind]);
-                const selected = selectedExamples.includes(kind);
+                const generated = Boolean(saved?.audio[kind]);
                 return (
                   <View key={`${kind}-${example}`} style={styles.exampleRow}>
-                    {generated ? (
-                      <Text style={styles.exampleText}>
-                        {index + 1}. {example}
-                      </Text>
-                    ) : (
-                      <Pressable
-                        style={styles.exampleSelect}
-                        onPress={() => toggleExample(kind)}
-                        disabled={voiceBusy !== null}
-                      >
-                        <View style={[styles.checkbox, selected && styles.checkboxOn]} />
-                        <Text style={styles.exampleText}>
-                          {index + 1}. {example}
-                        </Text>
-                      </Pressable>
-                    )}
-                    {generated ? (
+                    <Text style={styles.exampleText}>
+                      {index + 1}. {example}
+                    </Text>
+                    {generated && saved?.audio[kind] ? (
                       <View style={styles.audioCol}>
-                        <SpeakerButton url={card.audio[kind]} />
+                        <SpeakerButton url={saved.audio[kind]} />
                         <GeneratedBadge />
                       </View>
-                    ) : null}
+                    ) : (
+                      <ChipButton
+                        label={voiceBusy === kind ? "Generating…" : "Generate audio"}
+                        loading={voiceBusy === kind}
+                        disabled={voiceBusy !== null || saving}
+                        onPress={() => void generateVoice(kind)}
+                      />
+                    )}
                   </View>
                 );
               })}
-              {EXAMPLE_KINDS.some((kind) => !card.audio[kind]) ? (
-                <View style={styles.exampleActions}>
-                  <ChipButton
-                    label={
-                      voiceBusy === "examples"
-                        ? "Generating…"
-                        : pendingExampleCount > 1
-                          ? `Generate (${pendingExampleCount})`
-                          : "Generate"
-                    }
-                    loading={voiceBusy === "examples"}
-                    disabled={voiceBusy !== null || pendingExampleCount === 0}
-                    onPress={() => void generateSelectedExamples()}
-                  />
-                </View>
-              ) : null}
             </View>
           </View>
         ) : (
@@ -199,13 +220,22 @@ export default function AddCardScreen() {
 
         <View style={styles.back}>
           <Text style={styles.sectionLabel}>Back side</Text>
-          {card?.definition ? (
-            <Text style={styles.definition}>{card.definition}</Text>
+          {display?.definition ? (
+            <Text style={styles.definition}>{display.definition}</Text>
           ) : (
             <Text style={styles.placeholder}>Enter text here.</Text>
           )}
         </View>
       </View>
+
+      {display ? (
+        <PrimaryButton
+          label={saving ? "Saving…" : "Add card"}
+          loading={saving}
+          disabled={voiceBusy !== null}
+          onPress={() => void onAddCard()}
+        />
+      ) : null}
 
       <ErrorText>{voiceError}</ErrorText>
     </ScrollView>
@@ -272,32 +302,11 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     gap: 10,
   },
-  exampleSelect: {
-    flex: 1,
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-    marginTop: 2,
-  },
-  checkboxOn: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
   exampleText: {
     flex: 1,
     color: "rgba(255,255,255,0.8)",
     fontSize: 14,
     lineHeight: 20,
-  },
-  exampleActions: {
-    alignItems: "flex-end",
   },
   back: {
     borderTopWidth: StyleSheet.hairlineWidth,

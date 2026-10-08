@@ -3,10 +3,15 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AUDIO_KINDS, audioPlaybackPath, deleteFlashcardAudio, getOrCreateAudio, parseAudioKind } from "@/lib/flashcard/audio";
-import { createFlashcardForUser } from "@/lib/flashcard/create";
+import {
+  createFlashcardForUser,
+  createFlashcardFromContentForUser,
+  generateFlashcardPreviewForUser,
+} from "@/lib/flashcard/create";
 import { createDeckForUser, deleteDeckForUser } from "@/lib/flashcard/decks";
 import { deleteFlashcardForUser, updateFlashcardForUser } from "@/lib/flashcard/mutate";
 import { serializeFlashcard } from "@/lib/api/serialize";
+import { generatedCardSchema } from "@/lib/flashcard/schema";
 import {
   activateAnaglyphProfile,
   createAnaglyphProfile,
@@ -32,21 +37,100 @@ async function requireLearner() {
   return session.user;
 }
 
-export async function createCardAction(input: { deckId: string; word: string }) {
+export async function generateCardPreviewAction(input: { word: string }) {
+  await requireLearner();
+  const word = input.word.trim();
+  if (!word) {
+    return { ok: false as const, error: "Enter a word or phrase." };
+  }
+  try {
+    const result = await generateFlashcardPreviewForUser({ word });
+    if (!result.ok) {
+      return { ok: false as const, error: "Flashcard generation is not configured yet." };
+    }
+    return { ok: true as const, card: result.card, inputText: word };
+  } catch {
+    return { ok: false as const, error: "Could not generate a flashcard right now." };
+  }
+}
+
+export async function addCardAction(input: {
+  deckId: string;
+  word: string;
+  data: GeneratedCard;
+  replaceFlashcardId?: string;
+}) {
+  const user = await requireLearner();
+  const word = input.word.trim();
+  if (!word) {
+    return { ok: false as const, error: "Enter a word or phrase." };
+  }
+  const parsed = generatedCardSchema.safeParse(input.data);
+  if (!parsed.success) {
+    return { ok: false as const, error: "Check the card fields and try again." };
+  }
+  try {
+    if (input.replaceFlashcardId) {
+      await deleteFlashcardForUser({
+        userId: user.id,
+        flashcardId: input.replaceFlashcardId,
+      });
+    }
+    const result = await createFlashcardFromContentForUser({
+      userId: user.id,
+      word,
+      deckId: input.deckId,
+      card: parsed.data,
+    });
+    if (!result.ok) {
+      return {
+        ok: false as const,
+        error:
+          result.reason === "not_configured"
+            ? "Flashcard generation is not configured yet."
+            : "Dictionary not found.",
+      };
+    }
+    revalidatePath(`/app/decks/${input.deckId}`);
+    revalidatePath("/app");
+    return { ok: true as const, card: serializeFlashcard(result.flashcard) };
+  } catch {
+    return { ok: false as const, error: "Could not save the flashcard right now." };
+  }
+}
+
+export async function createCardAction(input: {
+  deckId: string;
+  word: string;
+  replaceFlashcardId?: string;
+}) {
   const user = await requireLearner();
   const word = input.word.trim();
   if (!word) {
     return { ok: false as const, error: "Enter a word or phrase." };
   }
   try {
+    if (input.replaceFlashcardId) {
+      await deleteFlashcardForUser({
+        userId: user.id,
+        flashcardId: input.replaceFlashcardId,
+      });
+    }
     const result = await createFlashcardForUser({
       userId: user.id,
       word,
       deckId: input.deckId,
     });
     if (!result.ok) {
-      return { ok: false as const, error: "Flashcard generation is not configured yet." };
+      return {
+        ok: false as const,
+        error:
+          result.reason === "deck_not_found"
+            ? "Dictionary not found."
+            : "Flashcard generation is not configured yet.",
+      };
     }
+    revalidatePath(`/app/decks/${input.deckId}`);
     return { ok: true as const, card: serializeFlashcard(result.flashcard) };
   } catch {
     return { ok: false as const, error: "Could not generate a flashcard right now." };

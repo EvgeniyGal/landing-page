@@ -1,6 +1,6 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
 import { useCallback, useMemo, useState } from "react";
-import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
 import { useFocusEffect } from "expo-router/react-navigation";
 import {
   deleteAudio,
@@ -75,7 +75,7 @@ function PronunciationControls({
 
   return (
     <ChipButton
-      label={busy ? "Generating…" : "Generate"}
+      label={busy ? "Generating…" : "Generate audio"}
       loading={busy}
       disabled={disabled}
       onPress={() => onGenerate(false)}
@@ -91,8 +91,7 @@ export default function EditCardScreen() {
   const [audio, setAudio] = useState<Partial<Record<AudioKind, string>>>({});
   const [error, setError] = useState<string | null>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceBusy, setVoiceBusy] = useState<AudioKind | "batch" | null>(null);
-  const [selectedExamples, setSelectedExamples] = useState<(typeof EXAMPLE_KINDS)[number][]>([]);
+  const [voiceBusy, setVoiceBusy] = useState<AudioKind | null>(null);
   const [pending, setPending] = useState(false);
 
   useFocusEffect(
@@ -113,7 +112,6 @@ export default function EditCardScreen() {
           setDraft(next);
           setSavedSnapshot(next);
           setAudio(result.card.audio);
-          setSelectedExamples([]);
         } catch (err) {
           if (!cancelled) {
             setError(messageFromError(err, "Could not load card."));
@@ -141,7 +139,6 @@ export default function EditCardScreen() {
   }
 
   const staleWord = draft.word.trim() !== savedSnapshot.word.trim() && Boolean(audio.word);
-  const pendingExampleCount = selectedExamples.filter((kind) => !audio[kind]).length;
   const head = cardHead(draft.word.trim() || "Card", draft.irregularForms);
 
   async function onSave() {
@@ -166,7 +163,6 @@ export default function EditCardScreen() {
       setDraft(nextDraft);
       setSavedSnapshot(nextDraft);
       setAudio(result.card.audio);
-      setSelectedExamples([]);
     } catch (err) {
       setError(messageFromError(err, "Could not save card."));
     } finally {
@@ -178,7 +174,7 @@ export default function EditCardScreen() {
     if (!cardId) {
       return;
     }
-    setVoiceBusy(kinds.length > 1 ? "batch" : kinds[0] ?? null);
+    setVoiceBusy(kinds[0] ?? null);
     setVoiceError(null);
     try {
       const merged: Partial<Record<AudioKind, string>> = {};
@@ -187,9 +183,6 @@ export default function EditCardScreen() {
         Object.assign(merged, result.audio);
       }
       setAudio((current) => ({ ...current, ...merged }));
-      if (kinds.some((kind) => kind !== "word")) {
-        setSelectedExamples((current) => current.filter((kind) => !kinds.includes(kind)));
-      }
     } catch (err) {
       setVoiceError(messageFromError(err, "Could not generate audio."));
     } finally {
@@ -201,7 +194,7 @@ export default function EditCardScreen() {
     if (!cardId) {
       return;
     }
-    setVoiceBusy(kinds.length > 1 ? "batch" : kinds[0] ?? null);
+    setVoiceBusy(kinds[0] ?? null);
     setVoiceError(null);
     try {
       for (const kind of kinds) {
@@ -221,17 +214,11 @@ export default function EditCardScreen() {
     }
   }
 
-  function toggleExample(kind: (typeof EXAMPLE_KINDS)[number]) {
-    setSelectedExamples((current) =>
-      current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
-    );
-  }
-
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
       <Stack.Screen options={{ title: head }} />
       <View style={styles.topActions}>
-        <PrimaryButton label={pending ? "Saving…" : "Save changes"} loading={pending} disabled={!dirty} onPress={() => void onSave()} />
+        <PrimaryButton label={pending ? "Updating…" : "Update"} loading={pending} disabled={!dirty} onPress={() => void onSave()} />
         <SecondaryButton label="Back to deck" onPress={() => router.replace(`/(app)/decks/${deckId}`)} />
       </View>
       <ErrorText>{error}</ErrorText>
@@ -291,24 +278,11 @@ export default function EditCardScreen() {
             if (!kind) {
               return null;
             }
-            const generated = Boolean(audio[kind]);
-            const selected = selectedExamples.includes(kind);
             const exampleDirty = draft.examples[index]?.trim() !== savedSnapshot.examples[index]?.trim();
             return (
               <View key={kind} style={styles.exampleBlock}>
                 <View style={styles.exampleHeader}>
-                  {!generated ? (
-                    <Pressable
-                      onPress={() => toggleExample(kind)}
-                      disabled={voiceBusy !== null || pending || exampleDirty}
-                      style={styles.exampleSelect}
-                    >
-                      <View style={[styles.checkbox, selected && styles.checkboxOn]} />
-                      <Text style={styles.label}>Example {index + 1}</Text>
-                    </Pressable>
-                  ) : (
-                    <Text style={styles.label}>Example {index + 1}</Text>
-                  )}
+                  <Text style={styles.label}>Example {index + 1}</Text>
                   {exampleDirty ? <Text style={styles.warningInline}>save text first</Text> : null}
                 </View>
                 <Field
@@ -323,7 +297,7 @@ export default function EditCardScreen() {
                 <View style={styles.exampleAudio}>
                   <PronunciationControls
                     url={audio[kind]}
-                    busy={voiceBusy === kind || voiceBusy === "batch"}
+                    busy={voiceBusy === kind}
                     disabled={pending || exampleDirty}
                     onGenerate={(force) => void generateVoice([kind], force)}
                     onRemove={() => void removeVoice([kind])}
@@ -332,30 +306,6 @@ export default function EditCardScreen() {
               </View>
             );
           })}
-          {EXAMPLE_KINDS.some((kind) => !audio[kind]) ? (
-            <View style={styles.exampleActions}>
-              <ChipButton
-                label={
-                  voiceBusy === "batch"
-                    ? "Generating…"
-                    : pendingExampleCount > 1
-                      ? `Generate (${pendingExampleCount})`
-                      : "Generate selected"
-                }
-                loading={voiceBusy === "batch"}
-                disabled={
-                  voiceBusy !== null ||
-                  pendingExampleCount === 0 ||
-                  pending ||
-                  selectedExamples.some((kind) => {
-                    const index = EXAMPLE_KINDS.indexOf(kind);
-                    return draft.examples[index]?.trim() !== savedSnapshot.examples[index]?.trim();
-                  })
-                }
-                onPress={() => void generateVoice(selectedExamples, false)}
-              />
-            </View>
-          ) : null}
         </View>
 
         <View style={styles.back}>
@@ -448,26 +398,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 8,
   },
-  exampleSelect: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  checkbox: {
-    width: 18,
-    height: 18,
-    borderRadius: 4,
-    borderWidth: 1,
-    borderColor: colors.borderStrong,
-  },
-  checkboxOn: {
-    backgroundColor: colors.accent,
-    borderColor: colors.accent,
-  },
   exampleAudio: {
-    alignItems: "flex-end",
-  },
-  exampleActions: {
     alignItems: "flex-end",
   },
   back: {

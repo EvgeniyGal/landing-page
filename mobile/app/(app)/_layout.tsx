@@ -1,5 +1,13 @@
 import { Redirect, Stack, router } from "expo-router";
-import { Pressable, StyleSheet, Text, View } from "react-native";
+import { useEffect, useRef, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+  type View as RNView,
+} from "react-native";
 import { LazyEyeProvider, useLazyEye } from "@/src/anaglyph/LazyEyeContext";
 import { useAuth } from "@/src/auth/session";
 import { LoadingBlock } from "@/src/components/ui";
@@ -47,8 +55,68 @@ function GlassesChip() {
   );
 }
 
-function HeaderRight() {
+function ProfileMenu() {
   const { user, logout } = useAuth();
+  const [open, setOpen] = useState(false);
+  const [menuPos, setMenuPos] = useState({ top: 0, right: 12 });
+  const avatarRef = useRef<RNView>(null);
+
+  useEffect(() => {
+    if (!open) {
+      return;
+    }
+    avatarRef.current?.measureInWindow((_x, y, _width, height) => {
+      setMenuPos({ top: y + height + 8, right: 12 });
+    });
+  }, [open]);
+
+  if (!user) {
+    return null;
+  }
+
+  return (
+    <>
+      <View ref={avatarRef}>
+        <Pressable
+          onPress={() => setOpen((value) => !value)}
+          style={styles.avatar}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel="Profile menu"
+        >
+          <Text style={styles.avatarText}>{(user.name || user.email).slice(0, 1).toUpperCase()}</Text>
+        </Pressable>
+      </View>
+      <Modal visible={open} transparent animationType="fade" onRequestClose={() => setOpen(false)}>
+        <Pressable style={styles.menuBackdrop} onPress={() => setOpen(false)}>
+          <Pressable style={[styles.menu, { top: menuPos.top, right: menuPos.right }]}>
+            <Pressable
+              onPress={() => {
+                setOpen(false);
+                router.push("/(app)/settings");
+              }}
+              style={styles.menuItem}
+            >
+              <Text style={styles.menuItemText}>Settings</Text>
+            </Pressable>
+            <Pressable
+              onPress={() => {
+                setOpen(false);
+                void logout().then(() => router.replace("/login"));
+              }}
+              style={styles.menuItem}
+            >
+              <Text style={styles.menuItemText}>Sign out</Text>
+            </Pressable>
+          </Pressable>
+        </Pressable>
+      </Modal>
+    </>
+  );
+}
+
+function HeaderRight() {
+  const { user } = useAuth();
   if (!user) {
     return null;
   }
@@ -56,21 +124,7 @@ function HeaderRight() {
     <View style={styles.headerRight}>
       <ModeToggle />
       <GlassesChip />
-      <Pressable
-        onPress={() => router.push("/(app)/settings")}
-        style={styles.avatar}
-        hitSlop={8}
-      >
-        <Text style={styles.avatarText}>{(user.name || user.email).slice(0, 1).toUpperCase()}</Text>
-      </Pressable>
-      <Pressable
-        onPress={() => {
-          void logout().then(() => router.replace("/login"));
-        }}
-        hitSlop={8}
-      >
-        <Text style={styles.signOut}>Sign out</Text>
-      </Pressable>
+      <ProfileMenu />
     </View>
   );
 }
@@ -173,9 +227,26 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 12,
   },
-  signOut: {
-    color: colors.mutedStrong,
-    fontSize: 13,
-    fontWeight: "600",
+  menuBackdrop: {
+    flex: 1,
+  },
+  menu: {
+    position: "absolute",
+    width: 160,
+    overflow: "hidden",
+    borderRadius: 12,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderColor: colors.border,
+    backgroundColor: colors.surface,
+    paddingVertical: 4,
+  },
+  menuItem: {
+    paddingHorizontal: 14,
+    paddingVertical: 12,
+  },
+  menuItemText: {
+    color: colors.text,
+    fontSize: 14,
+    fontWeight: "500",
   },
 });

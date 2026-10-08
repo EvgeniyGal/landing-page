@@ -63,10 +63,29 @@ export async function getStudyQueue(deckId: string) {
   }>(`/api/v1/decks/${deckId}/study`);
 }
 
-export async function createFlashcard(inputText: string, deckId?: string) {
+export async function previewFlashcard(inputText: string) {
+  return apiRequest<{ card: FlashcardWrite; inputText: string }>("/api/v1/flashcards", {
+    method: "POST",
+    body: { inputText, preview: true },
+  });
+}
+
+export async function createFlashcard(inputText: string, deckId?: string, replaceFlashcardId?: string) {
   return apiRequest<{ card: Flashcard }>("/api/v1/flashcards", {
     method: "POST",
-    body: { inputText, deckId },
+    body: { inputText, deckId, replaceFlashcardId },
+  });
+}
+
+export async function createFlashcardFromContent(
+  inputText: string,
+  data: FlashcardWrite,
+  deckId?: string,
+  replaceFlashcardId?: string,
+) {
+  return apiRequest<{ card: Flashcard }>("/api/v1/flashcards", {
+    method: "POST",
+    body: { inputText, deckId, card: data, replaceFlashcardId },
   });
 }
 

@@ -9,16 +9,43 @@ import { newCardSchedule } from "@/lib/srs/sm2";
 import type { GeneratedCard } from "@/lib/flashcard/schema";
 import type { Flashcard } from "@/lib/db/schema";
 
-export async function createFlashcardForUser(input: {
-  userId: string;
-  word: string;
-  deckId?: string;
-}) {
+async function requireGenerationSettings() {
   const settings = await getOrCreateSettings();
   if (!settings.encryptedOpenaiApiKey || !settings.openaiModel || !settings.flashcardPrompt.trim()) {
+    return null;
+  }
+  return settings;
+}
+
+export async function generateFlashcardPreviewForUser(input: {
+  word: string;
+}): Promise<{ ok: true; card: GeneratedCard } | { ok: false; reason: "not_configured" }> {
+  const settings = await requireGenerationSettings();
+  if (!settings) {
     return { ok: false as const, reason: "not_configured" as const };
   }
 
+  const apiKey = decryptSecret(settings.encryptedOpenaiApiKey!);
+  const card = await generateFlashcardContent({
+    apiKey,
+    model: settings.openaiModel!,
+    prompt: settings.flashcardPrompt,
+    word: input.word,
+  });
+  return { ok: true as const, card };
+}
+
+export async function createFlashcardFromContentForUser(input: {
+  userId: string;
+  word: string;
+  deckId?: string;
+  card: GeneratedCard;
+  model?: string | null;
+  promptSnapshot?: string | null;
+}): Promise<
+  | { ok: true; outputText: string; flashcard: Flashcard; card: GeneratedCard }
+  | { ok: false; reason: "deck_not_found" | "not_configured" }
+> {
   const deck = input.deckId
     ? await getDeckForUser(input.userId, input.deckId)
     : await getOrCreateDefaultDeck(input.userId);
@@ -26,15 +53,18 @@ export async function createFlashcardForUser(input: {
     return { ok: false as const, reason: "deck_not_found" as const };
   }
 
-  const apiKey = decryptSecret(settings.encryptedOpenaiApiKey);
-  const card = await generateFlashcardContent({
-    apiKey,
-    model: settings.openaiModel,
-    prompt: settings.flashcardPrompt,
-    word: input.word,
-  });
+  const card: GeneratedCard = {
+    ...input.card,
+    definition: stripDuplicatePosPrefix(input.card.definition, input.card.partOfSpeech),
+  };
   const outputText = formatFlashcardText(card);
   const schedule = newCardSchedule();
+  const settings = await getOrCreateSettings();
+  const model = input.model ?? settings.openaiModel;
+  const promptSnapshot = input.promptSnapshot ?? settings.flashcardPrompt;
+  if (!model || !promptSnapshot.trim()) {
+    return { ok: false as const, reason: "not_configured" as const };
+  }
 
   const db = getDb();
   const [row] = await db
@@ -49,7 +79,7 @@ export async function createFlashcardForUser(input: {
       transcription: card.transcription,
       irregularForms: card.irregularForms,
       examples: card.examples,
-      definition: stripDuplicatePosPrefix(card.definition, card.partOfSpeech),
+      definition: card.definition,
       state: schedule.state,
       stepIndex: schedule.stepIndex,
       ease: schedule.ease,
@@ -57,12 +87,37 @@ export async function createFlashcardForUser(input: {
       dueAt: schedule.dueAt,
       lapses: schedule.lapses,
       reps: schedule.reps,
-      model: settings.openaiModel,
-      promptSnapshot: settings.flashcardPrompt,
+      model,
+      promptSnapshot,
     })
     .returning();
 
   return { ok: true as const, outputText, flashcard: row, card };
+}
+
+export async function createFlashcardForUser(input: {
+  userId: string;
+  word: string;
+  deckId?: string;
+}) {
+  const settings = await requireGenerationSettings();
+  if (!settings) {
+    return { ok: false as const, reason: "not_configured" as const };
+  }
+
+  const preview = await generateFlashcardPreviewForUser({ word: input.word });
+  if (!preview.ok) {
+    return preview;
+  }
+
+  return createFlashcardFromContentForUser({
+    userId: input.userId,
+    word: input.word,
+    deckId: input.deckId,
+    card: preview.card,
+    model: settings.openaiModel,
+    promptSnapshot: settings.flashcardPrompt,
+  });
 }
 
 export function cardPayload(row: Flashcard): GeneratedCard | null {

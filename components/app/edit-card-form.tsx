@@ -104,7 +104,7 @@ function PronunciationControls({
       onClick={() => onGenerate(false)}
       className="h-8 shrink-0 rounded-full border-white/15 bg-transparent px-3 text-xs text-white hover:bg-white/10"
     >
-      {busy ? "Generating…" : "Generate"}
+      {busy ? "Generating…" : "Generate audio"}
     </Button>
   );
 }
@@ -123,8 +123,7 @@ export function EditCardForm({
   const [savedSnapshot, setSavedSnapshot] = useState(() => toDraft(initialCard));
   const [error, setError] = useState<string | null>(null);
   const [voiceError, setVoiceError] = useState<string | null>(null);
-  const [voiceBusy, setVoiceBusy] = useState<AudioKindKey | "batch" | null>(null);
-  const [selectedExamples, setSelectedExamples] = useState<(typeof EXAMPLE_KINDS)[number][]>([]);
+  const [voiceBusy, setVoiceBusy] = useState<AudioKindKey | null>(null);
   const [pending, startTransition] = useTransition();
 
   const dirty = useMemo(() => JSON.stringify(draft) !== JSON.stringify(savedSnapshot), [draft, savedSnapshot]);
@@ -134,12 +133,6 @@ export function EditCardForm({
     kind,
     stale: draft.examples[index]?.trim() !== savedSnapshot.examples[index]?.trim() && Boolean(audio[kind]),
   }));
-
-  function toggleExample(kind: (typeof EXAMPLE_KINDS)[number]) {
-    setSelectedExamples((current) =>
-      current.includes(kind) ? current.filter((item) => item !== kind) : [...current, kind],
-    );
-  }
 
   function onSave() {
     setError(null);
@@ -177,12 +170,11 @@ export function EditCardForm({
       setDraft(nextDraft);
       setSavedSnapshot(nextDraft);
       setAudio(result.card.audio);
-      setSelectedExamples([]);
     });
   }
 
   async function generateVoice(kinds: AudioKindKey[], force: boolean) {
-    setVoiceBusy(kinds.length > 1 ? "batch" : kinds[0] ?? null);
+    setVoiceBusy(kinds[0] ?? null);
     setVoiceError(null);
     const result = await requestAudioAction({
       flashcardId: initialCard.id,
@@ -195,13 +187,10 @@ export function EditCardForm({
       return;
     }
     setAudio((current) => ({ ...current, ...result.audio }));
-    if (kinds.some((kind) => kind !== "word")) {
-      setSelectedExamples((current) => current.filter((kind) => !kinds.includes(kind)));
-    }
   }
 
   async function removeVoice(kinds: AudioKindKey[]) {
-    setVoiceBusy(kinds.length > 1 ? "batch" : kinds[0] ?? null);
+    setVoiceBusy(kinds[0] ?? null);
     setVoiceError(null);
     const result = await deleteAudioAction({
       flashcardId: initialCard.id,
@@ -222,7 +211,6 @@ export function EditCardForm({
     });
   }
 
-  const pendingExampleCount = selectedExamples.filter((kind) => !audio[kind]).length;
   const head = draft.irregularForms.trim() || draft.word.trim() || "Card";
 
   return (
@@ -241,7 +229,7 @@ export function EditCardForm({
             onClick={onSave}
             className="bg-[#3d8bff] text-white hover:bg-[#2f7af0]"
           >
-            {pending ? "Saving…" : "Save changes"}
+            {pending ? "Updating…" : "Update"}
           </Button>
           <Button
             type="button"
@@ -323,24 +311,12 @@ export function EditCardForm({
               if (!kind) {
                 return null;
               }
-              const generated = Boolean(audio[kind]);
-              const selected = selectedExamples.includes(kind);
               const exampleDirty = draft.examples[index]?.trim() !== savedSnapshot.examples[index]?.trim();
               const stale = staleExamples[index]?.stale;
               return (
                 <div key={kind} className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-1.5">
                     <div className="flex items-center gap-2 text-xs text-white/45">
-                      {!generated ? (
-                        <input
-                          type="checkbox"
-                          checked={selected}
-                          disabled={voiceBusy !== null || pending || exampleDirty}
-                          onChange={() => toggleExample(kind)}
-                          className="size-4 accent-[#3d8bff]"
-                          aria-label={`Select example ${index + 1} for pronunciation`}
-                        />
-                      ) : null}
                       <span>Example {index + 1}</span>
                       {exampleDirty ? <span className="text-amber-200/80">save text first</span> : null}
                       {stale && !exampleDirty ? <span className="text-amber-200/80">outdated audio</span> : null}
@@ -361,7 +337,7 @@ export function EditCardForm({
                       flashcardId={initialCard.id}
                       kind={kind}
                       url={audio[kind]}
-                      busy={voiceBusy === kind || voiceBusy === "batch"}
+                      busy={voiceBusy === kind}
                       disabled={pending || exampleDirty}
                       onGenerate={(force) => void generateVoice([kind], force)}
                       onRemove={() => void removeVoice([kind])}
@@ -370,34 +346,6 @@ export function EditCardForm({
                 </div>
               );
             })}
-            {EXAMPLE_KINDS.some((kind) => !audio[kind]) ? (
-              <div className="flex justify-end">
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  disabled={
-                    voiceBusy !== null ||
-                    pendingExampleCount === 0 ||
-                    pending ||
-                    selectedExamples.some(
-                      (kind) => {
-                        const index = EXAMPLE_KINDS.indexOf(kind);
-                        return draft.examples[index]?.trim() !== savedSnapshot.examples[index]?.trim();
-                      },
-                    )
-                  }
-                  onClick={() => void generateVoice(selectedExamples, false)}
-                  className="h-8 rounded-full border-white/15 bg-transparent px-3 text-xs text-white hover:bg-white/10"
-                >
-                  {voiceBusy === "batch"
-                    ? "Generating…"
-                    : pendingExampleCount > 1
-                      ? `Generate (${pendingExampleCount})`
-                      : "Generate selected"}
-                </Button>
-              </div>
-            ) : null}
           </div>
         </section>
 
