@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { AddCardForm } from "@/components/app/add-card-form";
+import { Button } from "@/components/ui/button";
 import { getDeckForUser } from "@/lib/flashcard/decks";
 
 export default async function AddCardPage({ params }: { params: Promise<{ id: string }> }) {
@@ -27,7 +28,17 @@ export default async function AddCardPage({ params }: { params: Promise<{ id: st
         </Link>
         {" / Add new card"}
       </p>
-      <h1 className="mb-6 text-3xl font-semibold">Add new card</h1>
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="text-3xl font-semibold">Add new card</h1>
+        <Button
+          type="button"
+          variant="outline"
+          asChild
+          className="border-white/15 bg-transparent text-white hover:bg-white/5"
+        >
+          <Link href={`/app/decks/${deck.id}`}>Back to deck</Link>
+        </Button>
+      </div>
       <AddCardForm deckId={deck.id} />
     </div>
   );

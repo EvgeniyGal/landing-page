@@ -1,4 +1,4 @@
-import { useLocalSearchParams } from "expo-router";
+import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import { ScrollView, StyleSheet, Text, View } from "react-native";
 import {
@@ -14,6 +14,7 @@ import {
   ErrorText,
   Field,
   PrimaryButton,
+  SecondaryButton,
 } from "@/src/components/ui";
 import { cardHead, messageFromError } from "@/src/lib/format";
 import { colors } from "@/src/theme";
@@ -141,6 +142,7 @@ export default function AddCardScreen() {
 
   return (
     <ScrollView style={styles.screen} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
+      <SecondaryButton label="Back to deck" onPress={() => router.replace(`/(app)/decks/${deckId}`)} />
       <View style={styles.formRow}>
         <Field
           style={styles.flex}
