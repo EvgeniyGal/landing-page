@@ -146,6 +146,8 @@ export async function createAnaglyphProfile(input: {
   leftLightness: number;
   rightHue: number;
   rightLightness: number;
+  strongEye: "left" | "right";
+  strongEyeWeaken: number;
   background: AnaglyphBackground;
 }) {
   return apiRequest<{ profile: AnaglyphProfile }>("/api/v1/anaglyph-profiles", {
@@ -162,6 +164,8 @@ export async function updateAnaglyphProfile(
     leftLightness: number;
     rightHue: number;
     rightLightness: number;
+    strongEye: "left" | "right";
+    strongEyeWeaken: number;
     background: AnaglyphBackground;
   }>,
 ) {

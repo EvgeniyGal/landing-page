@@ -14,20 +14,31 @@ import {
   backgroundCss,
   eyeColor,
   neutralForeground,
+  resolveAnaglyphColors,
   type EyeSide,
 } from "@/lib/anaglyph/color";
 import type { AnaglyphBackground } from "@/lib/db/schema";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
+function withStrongEyeDefaults(profile: LazyEyeProfile): LazyEyeProfile {
+  return {
+    ...profile,
+    strongEye: profile.strongEye === "left" || profile.strongEye === "right" ? profile.strongEye : "right",
+    strongEyeWeaken: Number.isFinite(profile.strongEyeWeaken) ? profile.strongEyeWeaken : 0,
+  };
+}
+
 export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles: LazyEyeProfile[] }) {
   const router = useRouter();
   const { activateProfile, activeProfile } = useLazyEye();
   const [profiles, setProfiles] = useState(() =>
-    initialProfiles.map((profile) => ({
-      ...profile,
-      isActive: activeProfile ? profile.id === activeProfile.id : profile.isActive,
-    })),
+    initialProfiles.map((profile) =>
+      withStrongEyeDefaults({
+        ...profile,
+        isActive: activeProfile ? profile.id === activeProfile.id : profile.isActive,
+      }),
+    ),
   );
   const [selectedId, setSelectedId] = useState(
     activeProfile?.id ??
@@ -46,12 +57,19 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
   const colors = useMemo(
     () =>
       selected
-        ? {
-            leftHue: selected.leftHue,
-            leftLightness: selected.leftLightness,
-            rightHue: selected.rightHue,
-            rightLightness: selected.rightLightness,
-          }
+        ? resolveAnaglyphColors(
+            {
+              leftHue: selected.leftHue,
+              leftLightness: selected.leftLightness,
+              rightHue: selected.rightHue,
+              rightLightness: selected.rightLightness,
+            },
+            {
+              strongEye: selected.strongEye,
+              strongEyeWeaken: selected.strongEyeWeaken,
+              background: selected.background,
+            },
+          )
         : null,
     [selected],
   );
@@ -91,6 +109,8 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
         leftLightness: selected.leftLightness,
         rightHue: selected.rightHue,
         rightLightness: selected.rightLightness,
+        strongEye: selected.strongEye,
+        strongEyeWeaken: selected.strongEyeWeaken,
         background: selected.background,
       });
       if (!result.ok) {
@@ -120,6 +140,8 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
         leftLightness: selected?.leftLightness ?? 50,
         rightHue: selected?.rightHue ?? 180,
         rightLightness: selected?.rightLightness ?? 50,
+        strongEye: selected?.strongEye ?? "right",
+        strongEyeWeaken: selected?.strongEyeWeaken ?? 0,
         background: selected?.background ?? "black",
       });
       if (!result.ok) {
@@ -129,7 +151,7 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
       activateProfile(result.profile.id);
       setProfiles((current) => [
         ...current.map((profile) => ({ ...profile, isActive: false })),
-        { ...result.profile, isActive: true },
+        withStrongEyeDefaults({ ...result.profile, isActive: true }),
       ]);
       setSelectedId(result.profile.id);
       setCreating(false);
@@ -257,12 +279,19 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
         </h2>
         <div className="grid gap-3 sm:grid-cols-2">
           {profiles.map((profile) => {
-            const profileColors = {
-              leftHue: profile.leftHue,
-              leftLightness: profile.leftLightness,
-              rightHue: profile.rightHue,
-              rightLightness: profile.rightLightness,
-            };
+            const profileColors = resolveAnaglyphColors(
+              {
+                leftHue: profile.leftHue,
+                leftLightness: profile.leftLightness,
+                rightHue: profile.rightHue,
+                rightLightness: profile.rightLightness,
+              },
+              {
+                strongEye: profile.strongEye,
+                strongEyeWeaken: profile.strongEyeWeaken,
+                background: profile.background,
+              },
+            );
             const isSelected = profile.id === selected.id;
             return (
               <button
@@ -350,6 +379,56 @@ export function GlassProfilesSettings({ profiles: initialProfiles }: { profiles:
                 </button>
               ))}
             </div>
+          </div>
+
+          <div className="space-y-3 border-t border-white/10 pt-4">
+            <div>
+              <h3 className="text-xs font-semibold uppercase tracking-wide text-white/45">
+                Weaken strong eye
+              </h3>
+              <p className="mt-1 text-xs text-white/45">
+                Dims that eye&apos;s color toward the background so the weaker eye works harder.
+              </p>
+            </div>
+            <div className="flex gap-2">
+              {(["left", "right"] as const).map((side) => {
+                const selectedStrong = selected.strongEye === side;
+                return (
+                  <button
+                    key={side}
+                    type="button"
+                    onClick={() => patchSelected({ strongEye: side })}
+                    className={`rounded-xl px-4 py-2 text-sm font-semibold capitalize ${
+                      selectedStrong
+                        ? "bg-white text-black"
+                        : "bg-white/10 text-white/75 hover:text-white"
+                    }`}
+                  >
+                    {side}
+                  </button>
+                );
+              })}
+            </div>
+            <label className="block space-y-2">
+              <div className="flex items-center justify-between gap-3">
+                <span className="text-xs uppercase tracking-wide text-white/45">Weaken</span>
+                <span className="font-mono text-xs text-white/45">
+                  {Math.round(selected.strongEyeWeaken)}
+                </span>
+              </div>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                step={1}
+                value={selected.strongEyeWeaken}
+                onChange={(event) =>
+                  patchSelected({ strongEyeWeaken: Number(event.target.value) })
+                }
+                className="h-3 w-full cursor-pointer appearance-none rounded-full bg-gradient-to-r from-white/25 to-white/5"
+                aria-label="Strong eye weaken"
+              />
+            </label>
           </div>
 
           <div className="flex flex-wrap gap-2">

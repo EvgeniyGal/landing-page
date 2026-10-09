@@ -13,6 +13,8 @@ const patchSchema = z.object({
   leftLightness: z.number().min(0).max(100).optional(),
   rightHue: z.number().min(0).max(360).optional(),
   rightLightness: z.number().min(0).max(100).optional(),
+  strongEye: z.enum(["left", "right"]).optional(),
+  strongEyeWeaken: z.number().min(0).max(100).optional(),
   background: z.enum(["black", "gray", "white"]).optional(),
 });
 

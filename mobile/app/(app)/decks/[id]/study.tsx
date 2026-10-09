@@ -9,7 +9,11 @@ import { DichopticRatingButton } from "@/src/components/anaglyph/DichopticRating
 import { DichopticText } from "@/src/components/anaglyph/DichopticText";
 import { SpeakerButton } from "@/src/components/SpeakerButton";
 import { ErrorText, LoadingBlock } from "@/src/components/ui";
-import { backgroundCss, neutralForeground } from "@/src/lib/anaglyph/color";
+import {
+  backgroundCss,
+  neutralForeground,
+  resolveAnaglyphColors,
+} from "@/src/lib/anaglyph/color";
 import { cardHead, messageFromError } from "@/src/lib/format";
 import {
   advanceStudyQueue,
@@ -67,12 +71,19 @@ export default function StudyScreen() {
 
   const dichoptic = lazyEyeEnabled && activeProfile;
   const anaglyphColors = dichoptic
-    ? {
-        leftHue: activeProfile.leftHue,
-        leftLightness: activeProfile.leftLightness,
-        rightHue: activeProfile.rightHue,
-        rightLightness: activeProfile.rightLightness,
-      }
+    ? resolveAnaglyphColors(
+        {
+          leftHue: activeProfile.leftHue,
+          leftLightness: activeProfile.leftLightness,
+          rightHue: activeProfile.rightHue,
+          rightLightness: activeProfile.rightLightness,
+        },
+        {
+          strongEye: activeProfile.strongEye,
+          strongEyeWeaken: activeProfile.strongEyeWeaken,
+          background: activeProfile.background,
+        },
+      )
     : null;
   const surfaceBg = dichoptic ? backgroundCss(activeProfile.background) : colors.bg;
   const surfaceFg = dichoptic ? neutralForeground(activeProfile.background) : colors.text;

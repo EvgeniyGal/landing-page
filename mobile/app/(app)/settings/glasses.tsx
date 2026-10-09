@@ -25,11 +25,20 @@ import {
   eyeColor,
   hslToCss,
   neutralForeground,
+  resolveAnaglyphColors,
   type EyeSide,
 } from "@/src/lib/anaglyph/color";
 import { messageFromError } from "@/src/lib/format";
 import { withLocalActiveFlag } from "@/src/lib/device-profile";
 import { colors } from "@/src/theme";
+
+function withStrongEyeDefaults(profile: AnaglyphProfile): AnaglyphProfile {
+  return {
+    ...profile,
+    strongEye: profile.strongEye === "left" || profile.strongEye === "right" ? profile.strongEye : "right",
+    strongEyeWeaken: Number.isFinite(profile.strongEyeWeaken) ? profile.strongEyeWeaken : 0,
+  };
+}
 
 export default function GlassesSettingsScreen() {
   const { refresh, activateProfile, activeProfile } = useLazyEye();
@@ -48,7 +57,10 @@ export default function GlassesSettingsScreen() {
     try {
       const result = await listAnaglyphProfiles();
       const activeId = activeProfile?.id;
-      const localized = withLocalActiveFlag(result.profiles, activeId ?? null);
+      const localized = withLocalActiveFlag(
+        result.profiles.map(withStrongEyeDefaults),
+        activeId ?? null,
+      );
       setProfiles(localized);
       setSelectedId(
         localized.find((p) => p.isActive)?.id ?? localized[0]?.id ?? "",
@@ -70,12 +82,19 @@ export default function GlassesSettingsScreen() {
   const anaglyphColors = useMemo(
     () =>
       selected
-        ? {
-            leftHue: selected.leftHue,
-            leftLightness: selected.leftLightness,
-            rightHue: selected.rightHue,
-            rightLightness: selected.rightLightness,
-          }
+        ? resolveAnaglyphColors(
+            {
+              leftHue: selected.leftHue,
+              leftLightness: selected.leftLightness,
+              rightHue: selected.rightHue,
+              rightLightness: selected.rightLightness,
+            },
+            {
+              strongEye: selected.strongEye,
+              strongEyeWeaken: selected.strongEyeWeaken,
+              background: selected.background,
+            },
+          )
         : null,
     [selected],
   );
@@ -113,6 +132,8 @@ export default function GlassesSettingsScreen() {
         leftLightness: selected.leftLightness,
         rightHue: selected.rightHue,
         rightLightness: selected.rightLightness,
+        strongEye: selected.strongEye,
+        strongEyeWeaken: selected.strongEyeWeaken,
         background: selected.background,
       });
       await Promise.all([load(), refresh()]);
@@ -138,6 +159,8 @@ export default function GlassesSettingsScreen() {
         leftLightness: selected?.leftLightness ?? 50,
         rightHue: selected?.rightHue ?? 180,
         rightLightness: selected?.rightLightness ?? 50,
+        strongEye: selected?.strongEye ?? "right",
+        strongEyeWeaken: selected?.strongEyeWeaken ?? 0,
         background: selected?.background ?? "black",
       });
       await activateProfile(created.profile.id);
@@ -230,12 +253,19 @@ export default function GlassesSettingsScreen() {
 
       <Text style={styles.label}>Choose preset</Text>
       {profiles.map((profile) => {
-        const profileColors = {
-          leftHue: profile.leftHue,
-          leftLightness: profile.leftLightness,
-          rightHue: profile.rightHue,
-          rightLightness: profile.rightLightness,
-        };
+        const profileColors = resolveAnaglyphColors(
+          {
+            leftHue: profile.leftHue,
+            leftLightness: profile.leftLightness,
+            rightHue: profile.rightHue,
+            rightLightness: profile.rightLightness,
+          },
+          {
+            strongEye: profile.strongEye,
+            strongEyeWeaken: profile.strongEyeWeaken,
+            background: profile.background,
+          },
+        );
         return (
           <Pressable
             key={profile.id}
@@ -320,6 +350,38 @@ export default function GlassesSettingsScreen() {
           </Pressable>
         ))}
       </View>
+
+      <Text style={styles.label}>Weaken strong eye</Text>
+      <Text style={styles.hint}>
+        Dims that eye's color toward the background so the weaker eye works harder.
+      </Text>
+      <View style={styles.row}>
+        {(["left", "right"] as const).map((side) => {
+          const selectedStrong = selected.strongEye === side;
+          return (
+            <Pressable
+              key={side}
+              onPress={() => patchSelected({ strongEye: side })}
+              style={[styles.eyeChip, selectedStrong && styles.eyeChipActive]}
+            >
+              <Text style={[styles.eyeChipText, selectedStrong && styles.eyeChipTextActive]}>
+                {side}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      <View style={styles.weakenHeader}>
+        <Text style={styles.labelInline}>Weaken</Text>
+        <Text style={styles.weakenValue}>{Math.round(selected.strongEyeWeaken)}</Text>
+      </View>
+      <ColorSlider
+        value={selected.strongEyeWeaken}
+        min={0}
+        max={100}
+        trackColors={["#555555", "#aaaaaa", "#f0f0f0"]}
+        onChange={(strongEyeWeaken) => patchSelected({ strongEyeWeaken })}
+      />
 
       <View style={[styles.preview, { backgroundColor: previewBg }]}>
         <DichopticText
@@ -428,6 +490,15 @@ const styles = StyleSheet.create({
   eyeChipText: { color: colors.text, fontWeight: "600", textTransform: "capitalize" },
   eyeChipTextActive: { color: "#111" },
   label: { color: colors.mutedStrong, fontSize: 12, textTransform: "uppercase", marginTop: 4 },
+  labelInline: { color: colors.mutedStrong, fontSize: 12, textTransform: "uppercase" },
+  hint: { color: colors.muted, fontSize: 12, marginTop: -4 },
+  weakenHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginTop: 4,
+  },
+  weakenValue: { color: colors.muted, fontFamily: "monospace", fontSize: 12 },
   preview: { borderRadius: 16, padding: 16, gap: 10, borderWidth: 1, borderColor: colors.border },
   previewWord: { fontSize: 28, fontWeight: "700" },
   previewLine: { fontSize: 15, lineHeight: 22 },

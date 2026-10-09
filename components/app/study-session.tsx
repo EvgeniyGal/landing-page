@@ -10,6 +10,7 @@ import { SpeakerButton } from "@/components/app/speaker-button";
 import {
   backgroundCss,
   neutralForeground,
+  resolveAnaglyphColors,
 } from "@/lib/anaglyph/color";
 import type { ReviewRating } from "@/lib/db/schema";
 import {
@@ -82,12 +83,19 @@ export function StudySession({
 
   const dichoptic = lazyEyeEnabled && activeProfile;
   const colors = dichoptic
-    ? {
-        leftHue: activeProfile.leftHue,
-        leftLightness: activeProfile.leftLightness,
-        rightHue: activeProfile.rightHue,
-        rightLightness: activeProfile.rightLightness,
-      }
+    ? resolveAnaglyphColors(
+        {
+          leftHue: activeProfile.leftHue,
+          leftLightness: activeProfile.leftLightness,
+          rightHue: activeProfile.rightHue,
+          rightLightness: activeProfile.rightLightness,
+        },
+        {
+          strongEye: activeProfile.strongEye,
+          strongEyeWeaken: activeProfile.strongEyeWeaken,
+          background: activeProfile.background,
+        },
+      )
     : null;
   const surfaceBg = dichoptic ? backgroundCss(activeProfile.background) : undefined;
   const surfaceFg = dichoptic ? neutralForeground(activeProfile.background) : undefined;

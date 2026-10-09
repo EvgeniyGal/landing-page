@@ -13,6 +13,8 @@ const createSchema = z.object({
   leftLightness: z.number().min(0).max(100),
   rightHue: z.number().min(0).max(360),
   rightLightness: z.number().min(0).max(100),
+  strongEye: z.enum(["left", "right"]).default("right"),
+  strongEyeWeaken: z.number().min(0).max(100).default(0),
   background: z.enum(["black", "gray", "white"]),
 });
 

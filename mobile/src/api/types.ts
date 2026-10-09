@@ -58,6 +58,8 @@ export type FlashcardWrite = {
 
 export type AnaglyphBackground = "black" | "gray" | "white";
 
+export type AnaglyphEyeSide = "left" | "right";
+
 export type AnaglyphProfile = {
   id: string;
   name: string;
@@ -66,6 +68,8 @@ export type AnaglyphProfile = {
   leftLightness: number;
   rightHue: number;
   rightLightness: number;
+  strongEye: AnaglyphEyeSide;
+  strongEyeWeaken: number;
   background: AnaglyphBackground;
   createdAt: string;
   updatedAt: string;

@@ -78,8 +78,14 @@ export function LazyEyeProvider({ children }: { children: ReactNode }) {
     ]);
     setEnabled(preferences.preferences.lazyEyeEnabled);
     setTextScalePrefs(storedScales);
-    setProfiles(listed.profiles);
-    const resolved = resolveActiveProfileId(listed.profiles, storedId);
+    const normalizedProfiles = listed.profiles.map((profile) => ({
+      ...profile,
+      strongEye:
+        profile.strongEye === "left" || profile.strongEye === "right" ? profile.strongEye : ("right" as const),
+      strongEyeWeaken: Number.isFinite(profile.strongEyeWeaken) ? profile.strongEyeWeaken : 0,
+    }));
+    setProfiles(normalizedProfiles);
+    const resolved = resolveActiveProfileId(normalizedProfiles, storedId);
     setLocalActiveId(resolved);
     if (resolved && resolved !== storedId) {
       await writeActiveAnaglyphProfileId(resolved);

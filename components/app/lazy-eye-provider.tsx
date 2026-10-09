@@ -39,6 +39,8 @@ export type LazyEyeProfile = {
   leftLightness: number;
   rightHue: number;
   rightLightness: number;
+  strongEye: "left" | "right";
+  strongEyeWeaken: number;
   background: AnaglyphBackground;
 };
 

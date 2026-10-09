@@ -5,7 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { LogoYg } from "@/components/landing/logo-yg";
 import { logoutAction } from "@/app/login/actions";
 import { LazyEyeProvider, useLazyEye, type LazyEyeProfile } from "@/components/app/lazy-eye-provider";
-import { eyeColor } from "@/lib/anaglyph/color";
+import { eyeColor, resolveAnaglyphColors } from "@/lib/anaglyph/color";
 
 function ModeToggle() {
   const { lazyEyeEnabled, setLazyEyeEnabled, pending } = useLazyEye();
@@ -70,12 +70,19 @@ function GlassesPicker() {
               className="size-3.5 rounded-full border border-black/40"
               style={{
                 background: eyeColor(
-                  {
-                    leftHue: activeProfile.leftHue,
-                    leftLightness: activeProfile.leftLightness,
-                    rightHue: activeProfile.rightHue,
-                    rightLightness: activeProfile.rightLightness,
-                  },
+                  resolveAnaglyphColors(
+                    {
+                      leftHue: activeProfile.leftHue,
+                      leftLightness: activeProfile.leftLightness,
+                      rightHue: activeProfile.rightHue,
+                      rightLightness: activeProfile.rightLightness,
+                    },
+                    {
+                      strongEye: activeProfile.strongEye,
+                      strongEyeWeaken: activeProfile.strongEyeWeaken,
+                      background: activeProfile.background,
+                    },
+                  ),
                   "left",
                 ),
               }}
@@ -84,12 +91,19 @@ function GlassesPicker() {
               className="size-3.5 rounded-full border border-black/40"
               style={{
                 background: eyeColor(
-                  {
-                    leftHue: activeProfile.leftHue,
-                    leftLightness: activeProfile.leftLightness,
-                    rightHue: activeProfile.rightHue,
-                    rightLightness: activeProfile.rightLightness,
-                  },
+                  resolveAnaglyphColors(
+                    {
+                      leftHue: activeProfile.leftHue,
+                      leftLightness: activeProfile.leftLightness,
+                      rightHue: activeProfile.rightHue,
+                      rightLightness: activeProfile.rightLightness,
+                    },
+                    {
+                      strongEye: activeProfile.strongEye,
+                      strongEyeWeaken: activeProfile.strongEyeWeaken,
+                      background: activeProfile.background,
+                    },
+                  ),
                   "right",
                 ),
               }}
@@ -104,12 +118,19 @@ function GlassesPicker() {
           className="absolute right-0 z-20 mt-2 w-56 overflow-hidden rounded-xl border border-white/10 bg-[#1a1a1a] py-1 shadow-xl"
         >
           {profiles.map((profile) => {
-            const profileColors = {
-              leftHue: profile.leftHue,
-              leftLightness: profile.leftLightness,
-              rightHue: profile.rightHue,
-              rightLightness: profile.rightLightness,
-            };
+            const profileColors = resolveAnaglyphColors(
+              {
+                leftHue: profile.leftHue,
+                leftLightness: profile.leftLightness,
+                rightHue: profile.rightHue,
+                rightLightness: profile.rightLightness,
+              },
+              {
+                strongEye: profile.strongEye,
+                strongEyeWeaken: profile.strongEyeWeaken,
+                background: profile.background,
+              },
+            );
             return (
               <button
                 key={profile.id}

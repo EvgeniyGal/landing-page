@@ -7,6 +7,14 @@ export type AnaglyphColors = {
   rightLightness: number;
 };
 
+export type AnaglyphBackgroundTone = "black" | "gray" | "white";
+
+export type StrongEyeWeakenOptions = {
+  strongEye: EyeSide;
+  strongEyeWeaken: number;
+  background: AnaglyphBackgroundTone;
+};
+
 export const ANAGLYPH_SATURATION = 100;
 
 export function clampHue(hue: number) {
@@ -16,6 +24,53 @@ export function clampHue(hue: number) {
 
 export function clampLightness(lightness: number) {
   return Math.min(100, Math.max(0, lightness));
+}
+
+export function clampWeaken(amount: number) {
+  return Math.min(100, Math.max(0, Number.isFinite(amount) ? amount : 0));
+}
+
+export function normalizeEyeSide(value: unknown, fallback: EyeSide = "right"): EyeSide {
+  return value === "left" || value === "right" ? value : fallback;
+}
+
+export function backgroundLightness(background: AnaglyphBackgroundTone) {
+  if (background === "white") {
+    return 96;
+  }
+  if (background === "gray") {
+    return 42;
+  }
+  return 8;
+}
+
+export function resolveAnaglyphColors(
+  colors: AnaglyphColors,
+  options: StrongEyeWeakenOptions,
+): AnaglyphColors {
+  const amount = clampWeaken(options.strongEyeWeaken);
+  if (amount === 0) {
+    return {
+      leftHue: colors.leftHue,
+      leftLightness: colors.leftLightness,
+      rightHue: colors.rightHue,
+      rightLightness: colors.rightLightness,
+    };
+  }
+  const bgL = backgroundLightness(options.background);
+  const weakenL = (calibrated: number) =>
+    clampLightness(calibrated + (bgL - calibrated) * (amount / 100));
+  const strongEye = normalizeEyeSide(options.strongEye);
+  if (strongEye === "left") {
+    return {
+      ...colors,
+      leftLightness: weakenL(colors.leftLightness),
+    };
+  }
+  return {
+    ...colors,
+    rightLightness: weakenL(colors.rightLightness),
+  };
 }
 
 export function hslToCss(hue: number, lightness: number, saturation = ANAGLYPH_SATURATION) {

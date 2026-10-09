@@ -6,7 +6,13 @@ import {
   type AnaglyphBackground,
   type AnaglyphProfile,
 } from "@/lib/db/schema";
-import { clampHue, clampLightness } from "@/lib/anaglyph/color";
+import {
+  clampHue,
+  clampLightness,
+  clampWeaken,
+  normalizeEyeSide,
+  type EyeSide,
+} from "@/lib/anaglyph/color";
 import {
   normalizeSrsConfig,
   serializeSrsPreferences,
@@ -23,6 +29,8 @@ export type AnaglyphProfileInput = {
   leftLightness: number;
   rightHue: number;
   rightLightness: number;
+  strongEye: EyeSide;
+  strongEyeWeaken: number;
   background: AnaglyphBackground;
 };
 
@@ -35,6 +43,8 @@ export function serializeAnaglyphProfile(profile: AnaglyphProfile) {
     leftLightness: profile.leftLightness,
     rightHue: profile.rightHue,
     rightLightness: profile.rightLightness,
+    strongEye: normalizeEyeSide(profile.strongEye),
+    strongEyeWeaken: clampWeaken(profile.strongEyeWeaken),
     background: profile.background,
     createdAt: profile.createdAt.toISOString(),
     updatedAt: profile.updatedAt.toISOString(),
@@ -52,6 +62,8 @@ function normalizeProfileInput(input: AnaglyphProfileInput) {
     leftLightness: clampLightness(input.leftLightness),
     rightHue: clampHue(input.rightHue),
     rightLightness: clampLightness(input.rightLightness),
+    strongEye: normalizeEyeSide(input.strongEye),
+    strongEyeWeaken: clampWeaken(input.strongEyeWeaken),
     background: input.background,
   };
 }
@@ -223,6 +235,8 @@ export async function updateAnaglyphProfile(
     leftLightness: input.leftLightness ?? existing.leftLightness,
     rightHue: input.rightHue ?? existing.rightHue,
     rightLightness: input.rightLightness ?? existing.rightLightness,
+    strongEye: input.strongEye ?? normalizeEyeSide(existing.strongEye),
+    strongEyeWeaken: input.strongEyeWeaken ?? existing.strongEyeWeaken,
     background: input.background ?? existing.background,
   });
   if (!next) {

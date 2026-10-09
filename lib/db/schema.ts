@@ -198,6 +198,8 @@ export const anaglyphProfiles = pgTable("anaglyph_profiles", {
   leftLightness: real("left_lightness").notNull().default(50),
   rightHue: real("right_hue").notNull().default(180),
   rightLightness: real("right_lightness").notNull().default(50),
+  strongEye: varchar("strong_eye", { length: 5 }).notNull().default("right"),
+  strongEyeWeaken: real("strong_eye_weaken").notNull().default(0),
   background: anaglyphBackgroundEnum("background").notNull().default("black"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
