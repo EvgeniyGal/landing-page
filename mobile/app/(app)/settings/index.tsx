@@ -40,6 +40,17 @@ export default function SettingsIndexScreen() {
         </View>
         <Text style={styles.chevron}>›</Text>
       </Pressable>
+
+      <Pressable
+        style={styles.row}
+        onPress={() => router.push("/(app)/settings/notifications")}
+      >
+        <View style={styles.copy}>
+          <Text style={styles.rowTitle}>Study reminders</Text>
+          <Text style={styles.rowMeta}>Daily notification when cards are due</Text>
+        </View>
+        <Text style={styles.chevron}>›</Text>
+      </Pressable>
     </View>
   );
 }

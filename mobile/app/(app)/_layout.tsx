@@ -1,16 +1,19 @@
 import { Redirect, Stack, router } from "expo-router";
 import { useEffect, useRef, useState } from "react";
 import {
+  AppState,
   Modal,
   Pressable,
   StyleSheet,
   Text,
   View,
+  type AppStateStatus,
   type View as RNView,
 } from "react-native";
 import { LazyEyeProvider, useLazyEye } from "@/src/anaglyph/LazyEyeContext";
 import { useAuth } from "@/src/auth/session";
 import { LoadingBlock } from "@/src/components/ui";
+import { syncStudyReminder } from "@/src/notifications/study-reminder";
 import { colors } from "@/src/theme";
 
 function ModeToggle() {
@@ -146,12 +149,30 @@ function AppStack() {
       <Stack.Screen name="settings/text-size" options={{ title: "Text size" }} />
       <Stack.Screen name="settings/glasses" options={{ title: "Glasses" }} />
       <Stack.Screen name="settings/srs" options={{ title: "Spaced repetition" }} />
+      <Stack.Screen name="settings/notifications" options={{ title: "Study reminders" }} />
       <Stack.Screen name="decks/[id]/index" options={{ title: "Dictionary" }} />
       <Stack.Screen name="decks/[id]/add" options={{ title: "Add card" }} />
       <Stack.Screen name="decks/[id]/study" options={{ title: "Study", headerRight: () => <ModeToggle /> }} />
       <Stack.Screen name="decks/[id]/cards/[cardId]" options={{ title: "Edit card" }} />
     </Stack>
   );
+}
+
+function StudyReminderSync() {
+  useEffect(() => {
+    void syncStudyReminder();
+
+    function onChange(next: AppStateStatus) {
+      if (next === "active") {
+        void syncStudyReminder();
+      }
+    }
+
+    const sub = AppState.addEventListener("change", onChange);
+    return () => sub.remove();
+  }, []);
+
+  return null;
 }
 
 export default function AppLayout() {
@@ -167,6 +188,7 @@ export default function AppLayout() {
 
   return (
     <LazyEyeProvider>
+      <StudyReminderSync />
       <AppStack />
     </LazyEyeProvider>
   );

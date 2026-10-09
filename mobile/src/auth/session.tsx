@@ -1,4 +1,3 @@
-import * as SecureStore from "expo-secure-store";
 import {
   createContext,
   useCallback,
@@ -12,8 +11,8 @@ import { ApiError } from "@/src/api/types";
 import { getMe, login as loginRequest, loginWithGoogle as loginWithGoogleRequest } from "@/src/api/endpoints";
 import { setAuthToken, setUnauthorizedHandler } from "@/src/api/client";
 import type { User } from "@/src/api/types";
-
-const TOKEN_KEY = "flashcards_access_token";
+import { readStoredAccessToken, writeStoredAccessToken } from "@/src/auth/token-store";
+import { syncStudyReminder } from "@/src/notifications/study-reminder";
 
 type AuthContextValue = {
   user: User | null;
@@ -27,26 +26,6 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-async function readStoredToken() {
-  try {
-    return await SecureStore.getItemAsync(TOKEN_KEY);
-  } catch {
-    return null;
-  }
-}
-
-async function writeStoredToken(token: string | null) {
-  try {
-    if (token) {
-      await SecureStore.setItemAsync(TOKEN_KEY, token);
-    } else {
-      await SecureStore.deleteItemAsync(TOKEN_KEY);
-    }
-  } catch {
-    // SecureStore can fail on some web/dev targets; in-memory token still works for the session.
-  }
-}
-
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
@@ -56,7 +35,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(null);
     setToken(null);
     setUser(null);
-    await writeStoredToken(null);
+    await writeStoredAccessToken(null);
+    void syncStudyReminder();
   }, []);
 
   const refreshMe = useCallback(async () => {
@@ -75,7 +55,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     let cancelled = false;
 
     async function bootstrap() {
-      const stored = await readStoredToken();
+      const stored = await readStoredAccessToken();
       if (!stored) {
         if (!cancelled) {
           setLoading(false);
@@ -112,7 +92,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(result.accessToken);
     setToken(result.accessToken);
     setUser(result.user);
-    await writeStoredToken(result.accessToken);
+    await writeStoredAccessToken(result.accessToken);
   }, []);
 
   const loginWithGoogle = useCallback(async (idToken: string) => {
@@ -120,7 +100,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setAuthToken(result.accessToken);
     setToken(result.accessToken);
     setUser(result.user);
-    await writeStoredToken(result.accessToken);
+    await writeStoredAccessToken(result.accessToken);
   }, []);
 
   const logout = useCallback(async () => {

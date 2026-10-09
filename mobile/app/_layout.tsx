@@ -2,6 +2,7 @@ import { DarkTheme, ThemeProvider } from "expo-router/react-navigation";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/auth/session";
+import "@/src/notifications/study-reminder";
 import { colors } from "@/src/theme";
 
 const navTheme = {

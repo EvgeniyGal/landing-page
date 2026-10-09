@@ -17,6 +17,7 @@ import {
   formatWaitLabel,
   splitDueQueue,
 } from "@/src/lib/study-queue";
+import { syncStudyReminder } from "@/src/notifications/study-reminder";
 import { colors } from "@/src/theme";
 
 const EXAMPLE_KINDS: AudioKind[] = ["example_1", "example_2", "example_3"];
@@ -201,6 +202,7 @@ export default function StudyScreen() {
       setQueue(nextQueue);
       setStep("front");
       setNow(Date.now());
+      void syncStudyReminder();
       if (nextQueue.length === 0) {
         router.replace(`/(app)/decks/${deckId}`);
       }

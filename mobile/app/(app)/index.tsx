@@ -21,6 +21,7 @@ import {
   Title,
 } from "@/src/components/ui";
 import { messageFromError } from "@/src/lib/format";
+import { syncStudyReminder } from "@/src/notifications/study-reminder";
 import { colors } from "@/src/theme";
 
 export default function HomeScreen() {
@@ -43,6 +44,7 @@ export default function HomeScreen() {
     try {
       const result = await listDecks();
       setDecks(result.decks);
+      void syncStudyReminder();
     } catch (err) {
       setError(messageFromError(err, "Could not load dictionaries."));
     } finally {
