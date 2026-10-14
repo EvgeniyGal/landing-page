@@ -80,6 +80,7 @@ export function StudySession({
   const [busy, setBusy] = useState(false);
   const [now, setNow] = useState(() => Date.now());
   const [initialCount] = useState(initialCards.length);
+  const [completedCount, setCompletedCount] = useState(0);
 
   const dichoptic = lazyEyeEnabled && activeProfile;
   const colors = dichoptic
@@ -145,8 +146,9 @@ export function StudySession({
   }
 
   const head = card.irregularForms || card.word;
-  const reviewed = initialCount - remainingCount;
-  const progress = ((reviewed + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
+  const progress =
+    ((completedCount + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
+  const progressWidth = `${Math.min(100, Math.max(0, progress))}%`;
   const showExamples = step === "examples" || step === "answer";
   const showAnswer = step === "answer";
   const titleText = `${head}${card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}`;
@@ -170,6 +172,9 @@ export function StudySession({
       intervals: result.card.intervals,
     };
     const nextQueue = advanceStudyQueue(queue, updated);
+    if (nextQueue.length < queue.length) {
+      setCompletedCount((count) => count + 1);
+    }
     setQueue(nextQueue);
     setStep("front");
     setNow(Date.now());
@@ -199,7 +204,7 @@ export function StudySession({
           </p>
         </div>
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-black/40">
-          <div className="h-full bg-emerald-400" style={{ width: `${Math.max(progress, 8)}%` }} />
+          <div className="h-full bg-emerald-400 transition-[width] duration-300" style={{ width: progressWidth }} />
         </div>
 
         <article

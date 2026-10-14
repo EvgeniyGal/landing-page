@@ -63,6 +63,7 @@ export default function StudyScreen() {
   const [deckName, setDeckName] = useState("");
   const [queue, setQueue] = useState<Flashcard[]>([]);
   const [initialCount, setInitialCount] = useState(0);
+  const [completedCount, setCompletedCount] = useState(0);
   const [step, setStep] = useState<RevealStep>("front");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -107,6 +108,7 @@ export default function StudyScreen() {
           setDeckName(result.deck.name);
           setQueue(result.cards);
           setInitialCount(result.cards.length);
+          setCompletedCount(0);
           setStep("front");
           setNow(Date.now());
         } catch (err) {
@@ -177,8 +179,9 @@ export default function StudyScreen() {
   }
 
   const head = cardHead(card.word, card.irregularForms);
-  const reviewed = initialCount - remainingCount;
-  const progress = ((reviewed + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
+  const progress =
+    ((completedCount + STEP_PROGRESS[step]) / Math.max(initialCount, 1)) * 100;
+  const progressWidth = `${Math.min(100, Math.max(0, progress))}%`;
   const showExamples = step === "examples" || step === "answer";
   const showAnswer = step === "answer";
   const titleText = `${head}${card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}`;
@@ -217,6 +220,9 @@ export default function StudyScreen() {
         intervals: result.card.intervals ?? card.intervals,
       };
       const nextQueue = advanceStudyQueue(queue, updated);
+      if (nextQueue.length < queue.length) {
+        setCompletedCount((count) => count + 1);
+      }
       setQueue(nextQueue);
       setStep("front");
       setNow(Date.now());
@@ -241,7 +247,7 @@ export default function StudyScreen() {
         <Text style={[styles.counter, { color: surfaceFg, opacity: 0.7 }]}>{remainingCount} left</Text>
       </View>
       <View style={styles.progressTrack}>
-        <View style={[styles.progressFill, { width: `${Math.max(progress, 8)}%` }]} />
+        <View style={[styles.progressFill, { width: progressWidth }]} />
       </View>
 
       <Pressable
