@@ -99,6 +99,8 @@ export function StudySession({
     : null;
   const surfaceBg = dichoptic ? backgroundCss(activeProfile.background) : undefined;
   const surfaceFg = dichoptic ? neutralForeground(activeProfile.background) : undefined;
+  const speakerTone =
+    dichoptic && activeProfile.background !== "black" ? "onLight" : "onDark";
 
   const { due, waiting } = splitDueQueue(queue, now);
   const card = due[0];
@@ -242,7 +244,13 @@ export function StudySession({
                     titleText
                   )}
                 </p>
-                <p className={`mt-2 ${dichoptic ? "opacity-80" : "text-white/70"}`}>
+                <p
+                  className={`mt-2 ${dichoptic ? "opacity-80" : "text-white/70"}`}
+                  style={{
+                    fontSize: 18 * wordTextScale,
+                    lineHeight: `${Math.round(24 * wordTextScale)}px`,
+                  }}
+                >
                   {colors && card.transcription ? (
                     <DichopticText
                       text={card.transcription}
@@ -257,7 +265,13 @@ export function StudySession({
               </div>
               {card.audio.word ? (
                 <span onClick={(event) => event.stopPropagation()} onKeyDown={(event) => event.stopPropagation()}>
-                  <SpeakerButton flashcardId={card.id} kind="word" url={card.audio.word} generateOnPlay={false} />
+                  <SpeakerButton
+                    flashcardId={card.id}
+                    kind="word"
+                    url={card.audio.word}
+                    generateOnPlay={false}
+                    tone={speakerTone}
+                  />
                 </span>
               ) : null}
             </div>
@@ -296,6 +310,7 @@ export function StudySession({
                               kind={kind}
                               url={url}
                               generateOnPlay={false}
+                              tone={speakerTone}
                             />
                           </span>
                         ) : null}

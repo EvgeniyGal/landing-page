@@ -24,12 +24,14 @@ export function SpeakerButton({
   kind,
   url,
   generateOnPlay = false,
+  tone = "onDark",
   className,
 }: {
   flashcardId: string;
   kind: "word" | "example_1" | "example_2" | "example_3";
   url?: string;
   generateOnPlay?: boolean;
+  tone?: "onDark" | "onLight";
   className?: string;
 }) {
   const [src, setSrc] = useState(url);
@@ -69,7 +71,12 @@ export function SpeakerButton({
         type="button"
         onClick={() => void play()}
         disabled={busy || (!src && !generateOnPlay)}
-        className="inline-flex size-8 items-center justify-center rounded-full bg-white/10 text-white hover:bg-white/20 disabled:opacity-50"
+        className={cn(
+          "inline-flex size-8 items-center justify-center rounded-full disabled:opacity-50",
+          tone === "onLight"
+            ? "bg-black/10 text-[#1a1a1a] hover:bg-black/20"
+            : "bg-white/10 text-white hover:bg-white/20",
+        )}
         aria-label="Play audio"
       >
         <Volume2 className="size-4" />

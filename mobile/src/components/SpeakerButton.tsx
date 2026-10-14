@@ -15,13 +15,17 @@ export function GeneratedBadge() {
 export function SpeakerButton({
   url,
   disabled,
+  tone = "onDark",
 }: {
   url?: string;
   disabled?: boolean;
+  tone?: "onDark" | "onLight";
 }) {
   const playerRef = useRef<AudioPlayer | null>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const onLight = tone === "onLight";
+  const iconColor = onLight ? "#1a1a1a" : colors.text;
 
   useEffect(() => {
     return () => {
@@ -65,12 +69,17 @@ export function SpeakerButton({
         disabled={busy || disabled || !url}
         style={({ pressed }) => [
           styles.button,
+          onLight ? styles.buttonOnLight : styles.buttonOnDark,
           (busy || disabled || !url) && styles.buttonDisabled,
-          pressed && styles.buttonPressed,
+          pressed && (onLight ? styles.buttonPressedOnLight : styles.buttonPressedOnDark),
         ]}
         accessibilityLabel="Play audio"
       >
-        {busy ? <ActivityIndicator color={colors.text} size="small" /> : <Text style={styles.icon}>♪</Text>}
+        {busy ? (
+          <ActivityIndicator color={iconColor} size="small" />
+        ) : (
+          <Text style={[styles.icon, { color: iconColor }]}>♪</Text>
+        )}
       </Pressable>
       {error ? <Text style={styles.error}>{error}</Text> : null}
     </View>
@@ -86,18 +95,25 @@ const styles = StyleSheet.create({
     width: 32,
     height: 32,
     borderRadius: 16,
-    backgroundColor: "rgba(255,255,255,0.1)",
     alignItems: "center",
     justifyContent: "center",
+  },
+  buttonOnDark: {
+    backgroundColor: "rgba(255,255,255,0.1)",
+  },
+  buttonOnLight: {
+    backgroundColor: "rgba(0,0,0,0.1)",
   },
   buttonDisabled: {
     opacity: 0.45,
   },
-  buttonPressed: {
+  buttonPressedOnDark: {
     backgroundColor: "rgba(255,255,255,0.2)",
   },
+  buttonPressedOnLight: {
+    backgroundColor: "rgba(0,0,0,0.2)",
+  },
   icon: {
-    color: colors.text,
     fontSize: 14,
     fontWeight: "700",
   },

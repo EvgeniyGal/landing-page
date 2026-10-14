@@ -87,6 +87,8 @@ export default function StudyScreen() {
     : null;
   const surfaceBg = dichoptic ? backgroundCss(activeProfile.background) : colors.bg;
   const surfaceFg = dichoptic ? neutralForeground(activeProfile.background) : colors.text;
+  const speakerTone =
+    dichoptic && activeProfile.background !== "black" ? "onLight" : "onDark";
 
   useFocusEffect(
     useCallback(() => {
@@ -181,6 +183,11 @@ export default function StudyScreen() {
   const showAnswer = step === "answer";
   const titleText = `${head}${card.partOfSpeech ? ` (${card.partOfSpeech})` : ""}`;
   const headStyle = { ...styles.head, fontSize: 28 * wordTextScale };
+  const transcriptionStyle = {
+    ...styles.transcription,
+    fontSize: 16 * wordTextScale,
+    lineHeight: 22 * wordTextScale,
+  };
   const exampleStyle = {
     ...styles.exampleText,
     fontSize: 15 * exampleTextScale,
@@ -265,13 +272,13 @@ export default function StudyScreen() {
                 colors={anaglyphColors}
                 mode="letters"
                 neutralColor={surfaceFg}
-                style={styles.transcription}
+                style={transcriptionStyle}
               />
             ) : (
-              <Text style={styles.transcription}>{card.transcription}</Text>
+              <Text style={transcriptionStyle}>{card.transcription}</Text>
             )}
           </View>
-          {card.audio.word ? <SpeakerButton url={card.audio.word} /> : null}
+          {card.audio.word ? <SpeakerButton url={card.audio.word} tone={speakerTone} /> : null}
         </View>
 
         {showExamples ? (
@@ -297,7 +304,7 @@ export default function StudyScreen() {
                       {exampleIndex + 1}. {example}
                     </Text>
                   )}
-                  {url ? <SpeakerButton url={url} /> : null}
+                  {url ? <SpeakerButton url={url} tone={speakerTone} /> : null}
                 </View>
               );
             })}
