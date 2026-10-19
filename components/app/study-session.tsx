@@ -81,6 +81,7 @@ export function StudySession({
   const [now, setNow] = useState(() => Date.now());
   const [initialCount] = useState(initialCards.length);
   const [completedCount, setCompletedCount] = useState(0);
+  const [pinnedId, setPinnedId] = useState<string | null>(initialCards[0]?.id ?? null);
 
   const dichoptic = lazyEyeEnabled && activeProfile;
   const colors = dichoptic
@@ -104,22 +105,36 @@ export function StudySession({
     dichoptic && activeProfile.background !== "black" ? "onLight" : "onDark";
 
   const { due, waiting } = splitDueQueue(queue, now);
-  const card = due[0];
+  const pinnedCard = pinnedId ? queue.find((item) => item.id === pinnedId) : undefined;
+  const card = pinnedCard ?? due[0] ?? null;
   const nextWaiting = waiting[0];
-  const remainingCount = queue.length;
+  const dueCount = due.length;
+  const sessionRemaining = queue.length;
 
+  // Keep the clock moving so learning cards become due while other cards are open.
+  useEffect(() => {
+    const tick = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(tick);
+  }, []);
+
+  // Wake promptly when only waiting cards remain.
   useEffect(() => {
     if (card || !nextWaiting) {
       return;
     }
     const delay = Math.max(250, dueTimestamp(nextWaiting.dueAt) - Date.now());
     const timer = window.setTimeout(() => setNow(Date.now()), delay);
-    const tick = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      window.clearTimeout(timer);
-      window.clearInterval(tick);
-    };
+    return () => window.clearTimeout(timer);
   }, [card, nextWaiting]);
+
+  // Pin the active card so newly due learning cards don't steal the current review.
+  const nextDueId = due[0]?.id ?? null;
+  useEffect(() => {
+    if (pinnedId && queue.some((item) => item.id === pinnedId)) {
+      return;
+    }
+    setPinnedId(nextDueId);
+  }, [pinnedId, queue, nextDueId]);
 
   if (!card && !nextWaiting) {
     return (
@@ -139,7 +154,7 @@ export function StudySession({
           Learning step for “{nextWaiting.irregularForms || nextWaiting.word}”
         </p>
         <p className="mt-6 text-sm text-white/40">
-          {remainingCount} card{remainingCount === 1 ? "" : "s"} left in this session
+          {sessionRemaining} card{sessionRemaining === 1 ? "" : "s"} left in this session
         </p>
       </div>
     );
@@ -175,9 +190,12 @@ export function StudySession({
     if (nextQueue.length < queue.length) {
       setCompletedCount((count) => count + 1);
     }
+    const nextNow = Date.now();
+    const nextDue = splitDueQueue(nextQueue, nextNow).due;
     setQueue(nextQueue);
+    setPinnedId(nextDue[0]?.id ?? null);
     setStep("front");
-    setNow(Date.now());
+    setNow(nextNow);
 
     if (nextQueue.length === 0) {
       router.push("/app");
@@ -200,7 +218,7 @@ export function StudySession({
             {deckName}
           </p>
           <p className="text-sm" style={dichoptic ? { color: surfaceFg, opacity: 0.7 } : undefined}>
-            <span className={dichoptic ? undefined : "text-white/55"}>{remainingCount} left</span>
+            <span className={dichoptic ? undefined : "text-white/55"}>{dueCount} left</span>
           </p>
         </div>
         <div className="mb-5 h-1.5 overflow-hidden rounded-full bg-black/40">

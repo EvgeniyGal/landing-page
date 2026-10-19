@@ -64,6 +64,7 @@ export default function StudyScreen() {
   const [queue, setQueue] = useState<Flashcard[]>([]);
   const [initialCount, setInitialCount] = useState(0);
   const [completedCount, setCompletedCount] = useState(0);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
   const [step, setStep] = useState<RevealStep>("front");
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -109,6 +110,7 @@ export default function StudyScreen() {
           setQueue(result.cards);
           setInitialCount(result.cards.length);
           setCompletedCount(0);
+          setPinnedId(result.cards[0]?.id ?? null);
           setStep("front");
           setNow(Date.now());
         } catch (err) {
@@ -129,9 +131,16 @@ export default function StudyScreen() {
   );
 
   const { due, waiting } = splitDueQueue(queue, now);
-  const card = due[0];
+  const pinnedCard = pinnedId ? queue.find((item) => item.id === pinnedId) : undefined;
+  const card = pinnedCard ?? due[0] ?? null;
   const nextWaiting = waiting[0];
-  const remainingCount = queue.length;
+  const dueCount = due.length;
+  const sessionRemaining = queue.length;
+
+  useEffect(() => {
+    const tick = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(tick);
+  }, []);
 
   useEffect(() => {
     if (card || !nextWaiting) {
@@ -139,12 +148,16 @@ export default function StudyScreen() {
     }
     const delay = Math.max(250, dueTimestamp(nextWaiting.dueAt) - Date.now());
     const timer = setTimeout(() => setNow(Date.now()), delay);
-    const tick = setInterval(() => setNow(Date.now()), 1000);
-    return () => {
-      clearTimeout(timer);
-      clearInterval(tick);
-    };
+    return () => clearTimeout(timer);
   }, [card, nextWaiting]);
+
+  const nextDueId = due[0]?.id ?? null;
+  useEffect(() => {
+    if (pinnedId && queue.some((item) => item.id === pinnedId)) {
+      return;
+    }
+    setPinnedId(nextDueId);
+  }, [pinnedId, queue, nextDueId]);
 
   if (loading) {
     return <LoadingBlock label="Loading study session…" />;
@@ -171,7 +184,7 @@ export default function StudyScreen() {
           Learning step for “{cardHead(nextWaiting.word, nextWaiting.irregularForms)}”
         </Text>
         <Text style={styles.waitingMeta}>
-          {remainingCount} card{remainingCount === 1 ? "" : "s"} left in this session
+          {sessionRemaining} card{sessionRemaining === 1 ? "" : "s"} left in this session
         </Text>
         <ErrorText>{error}</ErrorText>
       </View>
@@ -223,9 +236,12 @@ export default function StudyScreen() {
       if (nextQueue.length < queue.length) {
         setCompletedCount((count) => count + 1);
       }
+      const nextNow = Date.now();
+      const nextDue = splitDueQueue(nextQueue, nextNow).due;
       setQueue(nextQueue);
+      setPinnedId(nextDue[0]?.id ?? null);
       setStep("front");
-      setNow(Date.now());
+      setNow(nextNow);
       void syncStudyReminder();
       if (nextQueue.length === 0) {
         router.replace(`/(app)/decks/${deckId}`);
@@ -244,7 +260,7 @@ export default function StudyScreen() {
     >
       <View style={styles.topRow}>
         <Text style={[styles.deckName, { color: surfaceFg }]}>{deckName}</Text>
-        <Text style={[styles.counter, { color: surfaceFg, opacity: 0.7 }]}>{remainingCount} left</Text>
+        <Text style={[styles.counter, { color: surfaceFg, opacity: 0.7 }]}>{dueCount} left</Text>
       </View>
       <View style={styles.progressTrack}>
         <View style={[styles.progressFill, { width: progressWidth }]} />
