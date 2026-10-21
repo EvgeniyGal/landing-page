@@ -95,6 +95,7 @@ export function ChipButton({
   label,
   loading,
   disabled,
+  style,
   ...props
 }: PressableProps & { label: string; loading?: boolean; disabled?: boolean }) {
   const isDisabled = Boolean(disabled || loading);
@@ -102,10 +103,11 @@ export function ChipButton({
     <Pressable
       {...props}
       disabled={isDisabled}
-      style={({ pressed }) => [
+      style={(state) => [
         styles.chip,
         isDisabled && styles.disabled,
-        pressed && styles.pressed,
+        state.pressed && styles.pressed,
+        typeof style === "function" ? style(state) : style,
       ]}
     >
       <Text style={styles.chipText}>{loading ? "…" : label}</Text>

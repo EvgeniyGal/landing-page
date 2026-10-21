@@ -28,6 +28,20 @@ export type DeckCounts = {
   due: number;
 };
 
+export type DeckCardPagination = {
+  page: number;
+  pageSize: number;
+  total: number;
+  totalPages: number;
+  search: string;
+};
+
+export type DeckListQuery = {
+  q?: string;
+  page?: number;
+  pageSize?: number;
+};
+
 export type Flashcard = {
   id: string;
   deckId: string;

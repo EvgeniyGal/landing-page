@@ -3,7 +3,9 @@ import type {
   AnaglyphBackground,
   AnaglyphProfile,
   AudioKind,
+  DeckCardPagination,
   DeckCounts,
+  DeckListQuery,
   DeckSummary,
   Flashcard,
   FlashcardWrite,
@@ -48,12 +50,24 @@ export async function deleteDeck(id: string) {
   return apiRequest<{ ok: true }>(`/api/v1/decks/${id}`, { method: "DELETE" });
 }
 
-export async function getDeck(id: string) {
+export async function getDeck(id: string, query: DeckListQuery = {}) {
+  const params = new URLSearchParams();
+  if (query.q?.trim()) {
+    params.set("q", query.q.trim());
+  }
+  if (query.page != null) {
+    params.set("page", String(query.page));
+  }
+  if (query.pageSize != null) {
+    params.set("pageSize", String(query.pageSize));
+  }
+  const qs = params.toString();
   return apiRequest<{
     deck: { id: string; name: string; isDefault: boolean; createdAt: string };
     counts: DeckCounts;
     cards: Flashcard[];
-  }>(`/api/v1/decks/${id}`);
+    pagination?: DeckCardPagination;
+  }>(`/api/v1/decks/${id}${qs ? `?${qs}` : ""}`);
 }
 
 export async function getStudyQueue(deckId: string) {

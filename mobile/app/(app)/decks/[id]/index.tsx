@@ -1,5 +1,5 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   FlatList,
   Pressable,
@@ -10,46 +10,87 @@ import {
 } from "react-native";
 import { useFocusEffect } from "expo-router/react-navigation";
 import { deleteFlashcard, getDeck } from "@/src/api/endpoints";
-import type { Flashcard } from "@/src/api/types";
+import type { DeckCardPagination, DeckCounts, Flashcard } from "@/src/api/types";
 import { ConfirmDialog } from "@/src/components/ConfirmDialog";
 import { SpeakerButton } from "@/src/components/SpeakerButton";
 import {
+  ChipButton,
   ErrorText,
+  Field,
   LoadingBlock,
   PrimaryButton,
   SecondaryButton,
 } from "@/src/components/ui";
+import {
+  DEFAULT_DECK_CARD_PAGE_SIZE,
+  DECK_CARD_PAGE_SIZES,
+  type DeckCardPageSize,
+} from "@/src/lib/deck-cards";
 import { cardHead, messageFromError, stateMeta } from "@/src/lib/format";
 import { formatDueLabel } from "@/src/lib/study-queue";
 import { colors } from "@/src/theme";
 
+const EMPTY_PAGINATION: DeckCardPagination = {
+  page: 1,
+  pageSize: DEFAULT_DECK_CARD_PAGE_SIZE,
+  total: 0,
+  totalPages: 1,
+  search: "",
+};
+
 export default function DeckDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const [deckName, setDeckName] = useState("Dictionary");
-  const [counts, setCounts] = useState({ new: 0, learning: 0, review: 0, due: 0 });
+  const [counts, setCounts] = useState<DeckCounts>({ new: 0, learning: 0, review: 0, due: 0 });
   const [cards, setCards] = useState<Flashcard[]>([]);
+  const [pagination, setPagination] = useState<DeckCardPagination>(EMPTY_PAGINATION);
+  const [searchInput, setSearchInput] = useState("");
+  const [search, setSearch] = useState("");
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState<DeckCardPageSize>(DEFAULT_DECK_CARD_PAGE_SIZE);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Flashcard | null>(null);
 
+  useEffect(() => {
+    const trimmed = searchInput.trim();
+    if (trimmed === search) {
+      return;
+    }
+    const handle = setTimeout(() => {
+      setSearch(trimmed);
+      setPage(1);
+    }, 300);
+    return () => clearTimeout(handle);
+  }, [searchInput, search]);
+
   const load = useCallback(
-    async (mode: "initial" | "refresh" = "initial") => {
+    async (mode: "initial" | "refresh" | "silent" = "initial") => {
       if (!id) {
         return;
       }
       setError(null);
       if (mode === "refresh") {
         setRefreshing(true);
-      } else {
+      } else if (mode === "initial") {
         setLoading(true);
       }
       try {
-        const result = await getDeck(id);
+        const result = await getDeck(id, { q: search || undefined, page, pageSize });
         setDeckName(result.deck.name);
         setCounts(result.counts);
         setCards(result.cards);
+        setPagination(
+          result.pagination ?? {
+            page,
+            pageSize,
+            total: result.cards.length,
+            totalPages: 1,
+            search,
+          },
+        );
       } catch (err) {
         setError(messageFromError(err, "Could not load deck."));
       } finally {
@@ -57,7 +98,7 @@ export default function DeckDetailScreen() {
         setRefreshing(false);
       }
     },
-    [id],
+    [id, search, page, pageSize],
   );
 
   useFocusEffect(
@@ -74,8 +115,12 @@ export default function DeckDetailScreen() {
     setError(null);
     try {
       await deleteFlashcard(pendingDelete.id);
-      setCards((current) => current.filter((card) => card.id !== pendingDelete.id));
       setPendingDelete(null);
+      if (cards.length <= 1 && page > 1) {
+        setPage((current) => current - 1);
+      } else {
+        await load("silent");
+      }
     } catch (err) {
       setError(messageFromError(err, "Could not delete card."));
       setPendingDelete(null);
@@ -88,6 +133,10 @@ export default function DeckDetailScreen() {
     return <LoadingBlock label="Loading deck…" />;
   }
 
+  const from = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
+  const to = Math.min(pagination.page * pagination.pageSize, pagination.total);
+  const emptyMessage = search ? `No cards match “${search}”.` : "No cards in this deck yet.";
+
   return (
     <View style={styles.screen}>
       <Stack.Screen options={{ title: deckName }} />
@@ -95,6 +144,7 @@ export default function DeckDetailScreen() {
         data={cards}
         keyExtractor={(item) => item.id}
         contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
         refreshControl={
           <RefreshControl
             refreshing={refreshing}
@@ -121,12 +171,64 @@ export default function DeckDetailScreen() {
                 style={styles.flex}
               />
             </View>
+
+            <Field
+              value={searchInput}
+              onChangeText={setSearchInput}
+              placeholder="Search words…"
+              autoCapitalize="none"
+              autoCorrect={false}
+              clearButtonMode="while-editing"
+              returnKeyType="search"
+            />
+
+            <View style={styles.pageSizeRow}>
+              <Text style={styles.pageSizeLabel}>Per page</Text>
+              <View style={styles.pageSizeChips}>
+                {DECK_CARD_PAGE_SIZES.map((size) => (
+                  <ChipButton
+                    key={size}
+                    label={String(size)}
+                    onPress={() => {
+                      setPageSize(size);
+                      setPage(1);
+                    }}
+                    style={pageSize === size ? styles.pageSizeActive : undefined}
+                  />
+                ))}
+              </View>
+            </View>
+
             <ErrorText>{error}</ErrorText>
           </View>
         }
         ListEmptyComponent={
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>No cards in this deck yet.</Text>
+            <Text style={styles.emptyText}>{emptyMessage}</Text>
+          </View>
+        }
+        ListFooterComponent={
+          <View style={styles.footer}>
+            <Text style={styles.footerMeta}>
+              {pagination.total === 0 ? "0 cards" : `Showing ${from}–${to} of ${pagination.total}`}
+            </Text>
+            <View style={styles.pager}>
+              <SecondaryButton
+                label="Prev"
+                disabled={pagination.page <= 1}
+                onPress={() => setPage((current) => Math.max(1, current - 1))}
+                style={styles.pagerBtn}
+              />
+              <Text style={styles.pageIndicator}>
+                {pagination.page} / {pagination.totalPages}
+              </Text>
+              <SecondaryButton
+                label="Next"
+                disabled={pagination.page >= pagination.totalPages}
+                onPress={() => setPage((current) => current + 1)}
+                style={styles.pagerBtn}
+              />
+            </View>
           </View>
         }
         renderItem={({ item, index }) => {
@@ -215,6 +317,24 @@ const styles = StyleSheet.create({
   flex: {
     flex: 1,
   },
+  pageSizeRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 12,
+  },
+  pageSizeLabel: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  pageSizeChips: {
+    flexDirection: "row",
+    gap: 8,
+  },
+  pageSizeActive: {
+    borderColor: colors.accent,
+    backgroundColor: "rgba(61,139,255,0.15)",
+  },
   empty: {
     backgroundColor: colors.surface,
     borderRadius: 16,
@@ -224,6 +344,29 @@ const styles = StyleSheet.create({
   emptyText: {
     color: colors.muted,
     fontSize: 14,
+  },
+  footer: {
+    marginTop: 16,
+    gap: 12,
+  },
+  footerMeta: {
+    color: colors.muted,
+    fontSize: 13,
+  },
+  pager: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  pagerBtn: {
+    flex: 1,
+    minHeight: 44,
+  },
+  pageIndicator: {
+    color: colors.mutedStrong,
+    fontSize: 13,
+    minWidth: 56,
+    textAlign: "center",
   },
   row: {
     flexDirection: "row",
