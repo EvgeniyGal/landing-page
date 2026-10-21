@@ -2,10 +2,15 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { auth } from "@/auth";
 import { DeckCardList, type DeckCardItem } from "@/components/app/deck-card-list";
-import { getDeckDetail } from "@/lib/flashcard/queries";
 import { audioPlaybackPath } from "@/lib/flashcard/audio";
 import { cardPayload } from "@/lib/flashcard/create";
 import { formatBackDefinition } from "@/lib/flashcard/format";
+import {
+  DEFAULT_DECK_CARD_PAGE_SIZE,
+  DECK_CARD_PAGE_SIZES,
+  getDeckDetail,
+  type DeckCardPageSize,
+} from "@/lib/flashcard/queries";
 
 function statusLabel(state: string) {
   if (state === "new") {
@@ -17,13 +22,40 @@ function statusLabel(state: string) {
   return { label: "Learning", className: "bg-emerald-500/20 text-emerald-200" };
 }
 
-export default async function DeckPage({ params }: { params: Promise<{ id: string }> }) {
+function parsePageSize(value: string | undefined): DeckCardPageSize {
+  const parsed = Number(value);
+  if ((DECK_CARD_PAGE_SIZES as readonly number[]).includes(parsed)) {
+    return parsed as DeckCardPageSize;
+  }
+  return DEFAULT_DECK_CARD_PAGE_SIZE;
+}
+
+function parsePage(value: string | undefined) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed < 1) {
+    return 1;
+  }
+  return Math.floor(parsed);
+}
+
+export default async function DeckPage({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ q?: string; page?: string; pageSize?: string }>;
+}) {
   const session = await auth();
   if (!session?.user?.id) {
     redirect("/login");
   }
   const { id } = await params;
-  const detail = await getDeckDetail(session.user.id, id);
+  const query = await searchParams;
+  const search = query.q?.trim() ?? "";
+  const page = parsePage(query.page);
+  const pageSize = parsePageSize(query.pageSize);
+
+  const detail = await getDeckDetail(session.user.id, id, { search, page, pageSize });
   if (!detail) {
     notFound();
   }
@@ -85,7 +117,17 @@ export default async function DeckPage({ params }: { params: Promise<{ id: strin
         </div>
       </div>
 
-      <DeckCardList deckId={id} cards={cards} />
+      <DeckCardList
+        deckId={id}
+        cards={cards}
+        pagination={{
+          page: detail.page,
+          pageSize: detail.pageSize as DeckCardPageSize,
+          total: detail.total,
+          totalPages: detail.totalPages,
+          search: detail.search,
+        }}
+      />
     </div>
   );
 }

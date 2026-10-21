@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from "next/server";
 import { userFromApiRequest } from "@/lib/api/session";
 import { serializeFlashcard } from "@/lib/api/serialize";
 import { deleteDeckForUser } from "@/lib/flashcard/decks";
-import { getDeckDetail } from "@/lib/flashcard/queries";
+import {
+  DEFAULT_DECK_CARD_PAGE_SIZE,
+  DECK_CARD_PAGE_SIZES,
+  getDeckDetail,
+} from "@/lib/flashcard/queries";
 
 export async function GET(
   request: NextRequest,
@@ -13,7 +17,20 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await context.params;
-  const detail = await getDeckDetail(user.id, id);
+  const { searchParams } = request.nextUrl;
+  const search = searchParams.get("q")?.trim() || undefined;
+  const pageParam = searchParams.get("page");
+  const pageSizeParam = searchParams.get("pageSize");
+  const paginate = pageParam != null || pageSizeParam != null || search != null;
+
+  const pageSize = paginate
+    ? (DECK_CARD_PAGE_SIZES as readonly number[]).includes(Number(pageSizeParam))
+      ? Number(pageSizeParam)
+      : DEFAULT_DECK_CARD_PAGE_SIZE
+    : undefined;
+  const page = paginate ? Math.max(1, Math.floor(Number(pageParam) || 1)) : undefined;
+
+  const detail = await getDeckDetail(user.id, id, { search, page, pageSize });
   if (!detail) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -21,6 +38,17 @@ export async function GET(
     deck: detail.deck,
     counts: detail.counts,
     cards: detail.cards.map((card) => serializeFlashcard(card)),
+    ...(paginate
+      ? {
+          pagination: {
+            page: detail.page,
+            pageSize: detail.pageSize,
+            total: detail.total,
+            totalPages: detail.totalPages,
+            search: detail.search,
+          },
+        }
+      : {}),
   });
 }
 
