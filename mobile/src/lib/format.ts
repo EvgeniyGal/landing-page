@@ -33,8 +33,12 @@ export function stripDuplicatePosPrefix(definition: string, partOfSpeech?: strin
 
 export function messageFromError(error: unknown, fallback = "Something went wrong.") {
   if (error instanceof Error && error.message) {
-    if (/localhost|127\.0\.0\.1|ConnectException|Network request failed/i.test(error.message)) {
-      return "Cannot reach the server. Check EXPO_PUBLIC_API_URL (use https://aiautomations.work for production).";
+    if (
+      /localhost|127\.0\.0\.1|ConnectException|Network request failed|timed out|has been canceled|AbortError/i.test(
+        error.message,
+      )
+    ) {
+      return "Cannot reach the API. Start npm run dev on your PC, keep the phone on the same Wi‑Fi, or set EXPO_PUBLIC_API_URL=https://aiautomations.work";
     }
     return error.message;
   }

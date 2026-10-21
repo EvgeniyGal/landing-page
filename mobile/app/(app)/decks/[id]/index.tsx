@@ -1,6 +1,7 @@
 import { router, Stack, useLocalSearchParams } from "expo-router";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import {
+  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -30,6 +31,8 @@ import { cardHead, messageFromError, stateMeta } from "@/src/lib/format";
 import { formatDueLabel } from "@/src/lib/study-queue";
 import { colors } from "@/src/theme";
 
+const SEARCH_DEBOUNCE_MS = 450;
+
 const EMPTY_PAGINATION: DeckCardPagination = {
   page: 1,
   pageSize: DEFAULT_DECK_CARD_PAGE_SIZE,
@@ -45,67 +48,97 @@ export default function DeckDetailScreen() {
   const [cards, setCards] = useState<Flashcard[]>([]);
   const [pagination, setPagination] = useState<DeckCardPagination>(EMPTY_PAGINATION);
   const [searchInput, setSearchInput] = useState("");
-  const [search, setSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState<DeckCardPageSize>(DEFAULT_DECK_CARD_PAGE_SIZE);
-  const [loading, setLoading] = useState(true);
+  const [initialLoading, setInitialLoading] = useState(true);
+  const [listLoading, setListLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<Flashcard | null>(null);
+  const requestIdRef = useRef(0);
+  const hasLoadedRef = useRef(false);
+  const queryRef = useRef({ search: "", page: 1, pageSize: DEFAULT_DECK_CARD_PAGE_SIZE });
+  queryRef.current = { search: debouncedSearch, page, pageSize };
 
   useEffect(() => {
     const trimmed = searchInput.trim();
-    if (trimmed === search) {
+    if (trimmed === debouncedSearch) {
       return;
     }
     const handle = setTimeout(() => {
-      setSearch(trimmed);
+      setDebouncedSearch(trimmed);
       setPage(1);
-    }, 300);
+    }, SEARCH_DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [searchInput, search]);
+  }, [searchInput, debouncedSearch]);
 
   const load = useCallback(
-    async (mode: "initial" | "refresh" | "silent" = "initial") => {
+    async (mode: "initial" | "refresh" | "silent" = "silent") => {
       if (!id) {
         return;
       }
+      const requestId = ++requestIdRef.current;
+      const { search, page: currentPage, pageSize: currentPageSize } = queryRef.current;
       setError(null);
       if (mode === "refresh") {
         setRefreshing(true);
       } else if (mode === "initial") {
-        setLoading(true);
+        setInitialLoading(true);
+      } else {
+        setListLoading(true);
       }
       try {
-        const result = await getDeck(id, { q: search || undefined, page, pageSize });
+        const result = await getDeck(id, {
+          q: search || undefined,
+          page: currentPage,
+          pageSize: currentPageSize,
+        });
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
         setDeckName(result.deck.name);
         setCounts(result.counts);
         setCards(result.cards);
         setPagination(
           result.pagination ?? {
-            page,
-            pageSize,
+            page: currentPage,
+            pageSize: currentPageSize,
             total: result.cards.length,
             totalPages: 1,
             search,
           },
         );
+        hasLoadedRef.current = true;
       } catch (err) {
+        if (requestId !== requestIdRef.current) {
+          return;
+        }
         setError(messageFromError(err, "Could not load deck."));
       } finally {
-        setLoading(false);
-        setRefreshing(false);
+        if (requestId === requestIdRef.current) {
+          setInitialLoading(false);
+          setListLoading(false);
+          setRefreshing(false);
+        }
       }
     },
-    [id, search, page, pageSize],
+    [id],
   );
 
   useFocusEffect(
     useCallback(() => {
-      void load();
+      void load(hasLoadedRef.current ? "silent" : "initial");
     }, [load]),
   );
+
+  useEffect(() => {
+    if (!hasLoadedRef.current) {
+      return;
+    }
+    void load("silent");
+  }, [debouncedSearch, page, pageSize, load]);
 
   async function onConfirmDelete() {
     if (!pendingDelete) {
@@ -129,13 +162,16 @@ export default function DeckDetailScreen() {
     }
   }
 
-  if (loading) {
+  if (initialLoading) {
     return <LoadingBlock label="Loading deck…" />;
   }
 
+  const searchPending = searchInput.trim() !== debouncedSearch;
   const from = pagination.total === 0 ? 0 : (pagination.page - 1) * pagination.pageSize + 1;
   const to = Math.min(pagination.page * pagination.pageSize, pagination.total);
-  const emptyMessage = search ? `No cards match “${search}”.` : "No cards in this deck yet.";
+  const emptyMessage = debouncedSearch
+    ? `No cards match “${debouncedSearch}”.`
+    : "No cards in this deck yet.";
 
   return (
     <View style={styles.screen}>
@@ -172,15 +208,25 @@ export default function DeckDetailScreen() {
               />
             </View>
 
-            <Field
-              value={searchInput}
-              onChangeText={setSearchInput}
-              placeholder="Search words…"
-              autoCapitalize="none"
-              autoCorrect={false}
-              clearButtonMode="while-editing"
-              returnKeyType="search"
-            />
+            <View style={styles.searchWrap}>
+              <Field
+                value={searchInput}
+                onChangeText={setSearchInput}
+                placeholder="Search words…"
+                autoCapitalize="none"
+                autoCorrect={false}
+                clearButtonMode="while-editing"
+                returnKeyType="search"
+                style={styles.searchField}
+              />
+              {searchPending || listLoading ? (
+                <ActivityIndicator
+                  color={colors.accent}
+                  style={styles.searchSpinner}
+                  accessibilityLabel="Searching"
+                />
+              ) : null}
+            </View>
 
             <View style={styles.pageSizeRow}>
               <Text style={styles.pageSizeLabel}>Per page</Text>
@@ -316,6 +362,17 @@ const styles = StyleSheet.create({
   },
   flex: {
     flex: 1,
+  },
+  searchWrap: {
+    position: "relative",
+    justifyContent: "center",
+  },
+  searchField: {
+    paddingRight: 44,
+  },
+  searchSpinner: {
+    position: "absolute",
+    right: 14,
   },
   pageSizeRow: {
     flexDirection: "row",

@@ -30,11 +30,14 @@ export function resolveApiUrl(path: string) {
   return `${getApiBaseUrl()}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
+const DEFAULT_TIMEOUT_MS = 12_000;
+
 type RequestOptions = {
   method?: string;
   body?: unknown;
   auth?: boolean;
   signal?: AbortSignal;
+  timeoutMs?: number;
 };
 
 export async function apiRequest<T>(path: string, options: RequestOptions = {}): Promise<T> {
@@ -50,12 +53,43 @@ export async function apiRequest<T>(path: string, options: RequestOptions = {}):
     headers.Authorization = `Bearer ${authToken}`;
   }
 
-  const response = await fetch(resolveApiUrl(path), {
-    method: options.method ?? (options.body !== undefined ? "POST" : "GET"),
-    headers,
-    body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
-    signal: options.signal,
-  });
+  const timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+  const controller = new AbortController();
+  const onAbort = () => controller.abort();
+  if (options.signal) {
+    if (options.signal.aborted) {
+      controller.abort();
+    } else {
+      options.signal.addEventListener("abort", onAbort, { once: true });
+    }
+  }
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
+
+  let response: Response;
+  try {
+    response = await fetch(resolveApiUrl(path), {
+      method: options.method ?? (options.body !== undefined ? "POST" : "GET"),
+      headers,
+      body: options.body !== undefined ? JSON.stringify(options.body) : undefined,
+      signal: controller.signal,
+    });
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    if (
+      (error instanceof Error && error.name === "AbortError") ||
+      /has been canceled|timed out|AbortError/i.test(message)
+    ) {
+      throw new ApiError(
+        `Cannot reach API (${getApiBaseUrl()}). Is Next.js running (npm run dev)?`,
+        0,
+        "timeout",
+      );
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeout);
+    options.signal?.removeEventListener("abort", onAbort);
+  }
 
   if (response.status === 401 && options.auth !== false) {
     onUnauthorized?.();

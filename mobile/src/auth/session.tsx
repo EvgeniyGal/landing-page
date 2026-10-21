@@ -73,6 +73,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         if (error instanceof ApiError && error.status === 401) {
           await clearSession();
+        } else if (!cancelled) {
+          // Network/API down or timeout: leave "Starting…" and send user to login.
+          // Keep the stored token so the next cold start can retry automatically.
+          setAuthToken(null);
+          setToken(null);
+          setUser(null);
         }
       } finally {
         if (!cancelled) {

@@ -1,7 +1,5 @@
+import { isRunningInExpoGo } from "expo";
 import { Platform } from "react-native";
-import * as BackgroundTask from "expo-background-task";
-import * as Notifications from "expo-notifications";
-import * as TaskManager from "expo-task-manager";
 import { listDecks } from "@/src/api/endpoints";
 import { ensureAuthTokenLoaded } from "@/src/auth/token-store";
 import {
@@ -16,14 +14,130 @@ export const STUDY_REMINDER_NOTIFICATION_ID = "study-reminder";
 export const STUDY_REMINDER_CHANNEL_ID = "study-reminders";
 export const STUDY_REMINDER_TASK = "study-reminder-sync";
 
-Notifications.setNotificationHandler({
-  handleNotification: async () => ({
-    shouldShowBanner: true,
-    shouldShowList: true,
-    shouldPlaySound: true,
-    shouldSetBadge: false,
-  }),
-});
+/**
+ * Android Expo Go throws when expo-notifications loads (push APIs removed in SDK 53).
+ * Background tasks are also unavailable in Expo Go. Use a development build for reminders.
+ */
+export const STUDY_REMINDERS_SUPPORTED = !isRunningInExpoGo();
+
+type NotificationsModule = typeof import("expo-notifications");
+type BackgroundTaskModule = typeof import("expo-background-task");
+type TaskManagerModule = typeof import("expo-task-manager");
+
+let notificationsModule: NotificationsModule | null | undefined;
+let backgroundTaskModule: BackgroundTaskModule | null | undefined;
+let taskManagerModule: TaskManagerModule | null | undefined;
+let didInitNotifications = false;
+let didDefineTask = false;
+
+function getNotifications(): NotificationsModule | null {
+  if (!STUDY_REMINDERS_SUPPORTED) {
+    return null;
+  }
+  if (notificationsModule !== undefined) {
+    return notificationsModule;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    notificationsModule = require("expo-notifications") as NotificationsModule;
+  } catch {
+    notificationsModule = null;
+  }
+  return notificationsModule;
+}
+
+function getBackgroundTask(): BackgroundTaskModule | null {
+  if (!STUDY_REMINDERS_SUPPORTED) {
+    return null;
+  }
+  if (backgroundTaskModule !== undefined) {
+    return backgroundTaskModule;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    backgroundTaskModule = require("expo-background-task") as BackgroundTaskModule;
+  } catch {
+    backgroundTaskModule = null;
+  }
+  return backgroundTaskModule;
+}
+
+function getTaskManager(): TaskManagerModule | null {
+  if (!STUDY_REMINDERS_SUPPORTED) {
+    return null;
+  }
+  if (taskManagerModule !== undefined) {
+    return taskManagerModule;
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    taskManagerModule = require("expo-task-manager") as TaskManagerModule;
+  } catch {
+    taskManagerModule = null;
+  }
+  return taskManagerModule;
+}
+
+function ensureNotificationSideEffects() {
+  if (didInitNotifications) {
+    return;
+  }
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return;
+  }
+  didInitNotifications = true;
+
+  Notifications.setNotificationHandler({
+    handleNotification: async () => ({
+      shouldShowBanner: true,
+      shouldShowList: true,
+      shouldPlaySound: true,
+      shouldSetBadge: false,
+    }),
+  });
+
+  Notifications.addNotificationReceivedListener((notification) => {
+    if (notification.request.identifier === STUDY_REMINDER_NOTIFICATION_ID) {
+      void markNotifiedToday();
+    }
+  });
+
+  Notifications.addNotificationResponseReceivedListener((response) => {
+    if (response.notification.request.identifier === STUDY_REMINDER_NOTIFICATION_ID) {
+      void markNotifiedToday();
+    }
+  });
+}
+
+function ensureBackgroundTaskDefined() {
+  if (didDefineTask) {
+    return;
+  }
+  const TaskManager = getTaskManager();
+  const BackgroundTask = getBackgroundTask();
+  if (!TaskManager || !BackgroundTask) {
+    return;
+  }
+  didDefineTask = true;
+  TaskManager.defineTask(STUDY_REMINDER_TASK, async () => {
+    try {
+      await syncStudyReminder();
+      return BackgroundTask.BackgroundTaskResult.Success;
+    } catch {
+      return BackgroundTask.BackgroundTaskResult.Failed;
+    }
+  });
+}
+
+/** Call once from app root when reminders are supported (no-op in Expo Go). */
+export function initStudyReminders() {
+  if (!STUDY_REMINDERS_SUPPORTED) {
+    return;
+  }
+  ensureNotificationSideEffects();
+  ensureBackgroundTaskDefined();
+}
 
 async function markNotifiedToday() {
   const prefs = await readStudyReminderPrefs();
@@ -34,27 +148,6 @@ async function markNotifiedToday() {
   await writeStudyReminderPrefs({ ...prefs, lastNotifiedDay: todayKey });
 }
 
-Notifications.addNotificationReceivedListener((notification) => {
-  if (notification.request.identifier === STUDY_REMINDER_NOTIFICATION_ID) {
-    void markNotifiedToday();
-  }
-});
-
-Notifications.addNotificationResponseReceivedListener((response) => {
-  if (response.notification.request.identifier === STUDY_REMINDER_NOTIFICATION_ID) {
-    void markNotifiedToday();
-  }
-});
-
-TaskManager.defineTask(STUDY_REMINDER_TASK, async () => {
-  try {
-    await syncStudyReminder();
-    return BackgroundTask.BackgroundTaskResult.Success;
-  } catch {
-    return BackgroundTask.BackgroundTaskResult.Failed;
-  }
-});
-
 export type StudyReminderSyncResult = {
   due: number;
   scheduled: boolean;
@@ -63,7 +156,8 @@ export type StudyReminderSyncResult = {
 };
 
 async function ensureAndroidChannel() {
-  if (Platform.OS !== "android") {
+  const Notifications = getNotifications();
+  if (!Notifications || Platform.OS !== "android") {
     return;
   }
   await Notifications.setNotificationChannelAsync(STUDY_REMINDER_CHANNEL_ID, {
@@ -74,6 +168,11 @@ async function ensureAndroidChannel() {
 }
 
 export async function requestStudyReminderPermissions() {
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return false;
+  }
+  ensureNotificationSideEffects();
   const current = await Notifications.getPermissionsAsync();
   if (current.granted || current.ios?.status === Notifications.IosAuthorizationStatus.PROVISIONAL) {
     return true;
@@ -90,7 +189,13 @@ export async function fetchDueCardCount() {
 }
 
 async function cancelStudyReminderNotifications() {
-  await Notifications.cancelScheduledNotificationAsync(STUDY_REMINDER_NOTIFICATION_ID).catch(() => undefined);
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return;
+  }
+  await Notifications.cancelScheduledNotificationAsync(STUDY_REMINDER_NOTIFICATION_ID).catch(
+    () => undefined,
+  );
   const presented = await Notifications.getPresentedNotificationsAsync();
   await Promise.all(
     presented
@@ -100,6 +205,12 @@ async function cancelStudyReminderNotifications() {
 }
 
 async function registerBackgroundSync() {
+  ensureBackgroundTaskDefined();
+  const BackgroundTask = getBackgroundTask();
+  const TaskManager = getTaskManager();
+  if (!BackgroundTask || !TaskManager) {
+    return;
+  }
   const status = await BackgroundTask.getStatusAsync();
   if (status !== BackgroundTask.BackgroundTaskStatus.Available) {
     return;
@@ -109,12 +220,16 @@ async function registerBackgroundSync() {
     return;
   }
   await BackgroundTask.registerTaskAsync(STUDY_REMINDER_TASK, {
-    // Minutes — OS may delay; keeps due-card checks roughly hourly.
     minimumInterval: 60,
   });
 }
 
 async function unregisterBackgroundSync() {
+  const BackgroundTask = getBackgroundTask();
+  const TaskManager = getTaskManager();
+  if (!BackgroundTask || !TaskManager) {
+    return;
+  }
   const registered = await TaskManager.isTaskRegisteredAsync(STUDY_REMINDER_TASK);
   if (!registered) {
     return;
@@ -130,6 +245,11 @@ function notificationBody(due: number) {
 }
 
 async function presentStudyReminder(due: number) {
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return;
+  }
+  ensureNotificationSideEffects();
   await ensureAndroidChannel();
   await Notifications.scheduleNotificationAsync({
     identifier: STUDY_REMINDER_NOTIFICATION_ID,
@@ -145,9 +265,14 @@ async function presentStudyReminder(due: number) {
 }
 
 async function scheduleStudyReminderAt(when: Date, due: number) {
+  const Notifications = getNotifications();
+  if (!Notifications) {
+    return;
+  }
   if (when.getTime() <= Date.now() + 1_000) {
     return;
   }
+  ensureNotificationSideEffects();
   await ensureAndroidChannel();
   await Notifications.scheduleNotificationAsync({
     identifier: STUDY_REMINDER_NOTIFICATION_ID,
@@ -173,6 +298,13 @@ async function scheduleStudyReminderAt(when: Date, due: number) {
 export async function syncStudyReminder(
   prefsOverride?: StudyReminderPrefs,
 ): Promise<StudyReminderSyncResult> {
+  if (!STUDY_REMINDERS_SUPPORTED) {
+    return { due: 0, scheduled: false, presented: false, enabled: false };
+  }
+
+  ensureNotificationSideEffects();
+  ensureBackgroundTaskDefined();
+
   const prefs = prefsOverride ?? (await readStudyReminderPrefs());
 
   if (!prefs.enabled) {
@@ -205,7 +337,6 @@ export async function syncStudyReminder(
   await cancelStudyReminderNotifications();
 
   if (due <= 0) {
-    // Keep background sync so we can schedule again when cards become due.
     await registerBackgroundSync();
     return { due: 0, scheduled: false, presented: false, enabled: true };
   }

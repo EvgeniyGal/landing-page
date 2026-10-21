@@ -12,6 +12,7 @@ import {
 import {
   requestStudyReminderPermissions,
   saveStudyReminderPrefsAndSync,
+  STUDY_REMINDERS_SUPPORTED,
 } from "@/src/notifications/study-reminder";
 import { colors } from "@/src/theme";
 
@@ -59,6 +60,13 @@ export default function NotificationsSettingsScreen() {
   );
 
   async function apply(patch: Partial<Pick<StudyReminderPrefs, "enabled" | "hour" | "minute">>) {
+    if (!STUDY_REMINDERS_SUPPORTED) {
+      setError(
+        "Study reminders need a development build. Expo Go does not support notifications/background tasks (SDK 53+).",
+      );
+      setPrefs((current) => ({ ...current, enabled: false }));
+      return;
+    }
     setPending(true);
     setError(null);
     setHint(null);
@@ -101,6 +109,12 @@ export default function NotificationsSettingsScreen() {
         Once a day at the time you choose. Notifies only when you have cards ready to study.
       </Text>
 
+      {!STUDY_REMINDERS_SUPPORTED ? (
+        <Text style={styles.hint}>
+          Reminders are unavailable in Expo Go. Use a development build to enable them.
+        </Text>
+      ) : null}
+
       <View style={styles.card}>
         <View style={styles.row}>
           <View style={styles.copy}>
@@ -108,8 +122,8 @@ export default function NotificationsSettingsScreen() {
             <Text style={styles.rowMeta}>Local device time</Text>
           </View>
           <Switch
-            value={prefs.enabled}
-            disabled={pending}
+            value={prefs.enabled && STUDY_REMINDERS_SUPPORTED}
+            disabled={pending || !STUDY_REMINDERS_SUPPORTED}
             onValueChange={(enabled) => {
               setPrefs((current) => ({ ...current, enabled }));
               void apply({ enabled });

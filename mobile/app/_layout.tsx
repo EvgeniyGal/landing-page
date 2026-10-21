@@ -1,8 +1,9 @@
+import { useEffect } from "react";
 import { DarkTheme, ThemeProvider } from "expo-router/react-navigation";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { AuthProvider } from "@/src/auth/session";
-import "@/src/notifications/study-reminder";
+import { initStudyReminders } from "@/src/notifications/study-reminder";
 import { colors } from "@/src/theme";
 
 const navTheme = {
@@ -18,6 +19,10 @@ const navTheme = {
 };
 
 export default function RootLayout() {
+  useEffect(() => {
+    initStudyReminders();
+  }, []);
+
   return (
     <AuthProvider>
       <ThemeProvider value={navTheme}>
